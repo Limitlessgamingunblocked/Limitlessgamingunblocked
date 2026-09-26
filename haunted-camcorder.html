@@ -15,8 +15,8 @@
   ║                                                                      ║
   ║  Code sections (search for "═══ <NAME>"):                            ║
   ║    CORE UTILS · SETTINGS · BUS & NET · AUDIO · TEXTURES · RENDERER · ║
-  ║    WORLD · PROPS · GHOSTS · OPERATOR · DIRECTOR · STORY · EVIDENCE · ║
-  ║    RECORDER · REPLAY · UI · GAME LOOP                                ║
+  ║    WORLD · PROPS · GHOSTS · OPERATOR · DIRECTOR · HUNTERS · STORY ·  ║
+  ║    EVIDENCE · RECORDER · REPLAY · UI · GAME LOOP                     ║
   ╚══════════════════════════════════════════════════════════════════════╝
 -->
 <style>
@@ -85,8 +85,8 @@
   #emf { position: absolute; top: calc(5vh + 58px); right: calc(5vw + 22px); font-size: .62em; text-align: right; opacity: .9; }
   #emf .bars { letter-spacing: 1px; }
   #emf.hot .bars { color: #ff5b5b; }
-  #objective { position: absolute; top: calc(5vh + 58px); left: 50%; transform: translateX(-50%); font-size: .6em; text-align: center; white-space: nowrap; }
-  #objective.alert { color: #ff5b5b; font-size: .78em; animation: pulse .6s infinite alternate; }
+  #objective { position: absolute; top: calc(5vh + 58px); left: 50%; transform: translateX(-50%); font-size: .6em; text-align: center; width: max-content; max-width: 58vw; line-height: 1.35; }
+  #objective.alert { color: #ff5b5b; font-size: .66em; animation: pulse .6s infinite alternate; }
   @keyframes pulse { from { opacity: 1; } to { opacity: .45; } }
   #hint { position: absolute; bottom: calc(5vh + 150px); left: 50%; transform: translateX(-50%); font-size: .52em; text-align: center; padding: 6px 14px; background: rgba(0,0,0,.5); border: 1px solid rgba(255,255,255,.3); opacity: 0; transition: opacity .5s; max-width: 64vw; }
   #hint.show { opacity: 1; }
@@ -108,6 +108,8 @@
   #prompt.show { opacity: 1; }
   #carry { position: absolute; bottom: calc(5vh + 64px); left: calc(5vw + 22px); font-size: .6em; color: #e8b0b0; }
   #evid { font-size: .95em; }
+  #mAudio { margin-top: 4px; letter-spacing: 1px; }
+  #mAudio .lo { color: #9dff9d; } #mAudio .mid { color: #ffe08a; } #mAudio .hi { color: #ff5b5b; }
   #chapter { display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0; transition: opacity 1.4s; font-family: Georgia, "Times New Roman", serif; color: #d8d2c0; text-shadow: 0 0 14px #000, 0 0 3px #000; z-index: 3; }
   #chapter.show { opacity: 1; }
   #chapter .n { font-size: 15px; letter-spacing: 9px; opacity: .8; }
@@ -261,7 +263,7 @@
   <div id="rec"><span class="dot">●</span> REC</div>
   <div id="playlbl">PLAY ►</div>
   <div id="sp">SP</div>
-  <div id="modes"><div id="mLight">LIGHT ON</div><div id="mNV">NIGHT OFF</div><div id="evid">EVIDENCE 00</div></div>
+  <div id="modes"><div id="mLight">LIGHT ON</div><div id="mNV">NIGHT OFF</div><div id="evid">EVIDENCE 00</div><div id="mAudio" class="hidden"></div></div>
   <div id="batt"><span id="battpct">100%</span><div class="shell"><div class="bar"></div><div class="bar"></div><div class="bar"></div><div class="bar"></div></div></div>
   <div id="emf">EMF <span class="bars">▯▯▯▯▯</span></div>
   <div id="objective"></div>
@@ -340,6 +342,7 @@
       <li>Some things only show up in <b>NIGHT VISION</b>. It eats battery. Don't let the battery die.</li>
       <li>If you hear footsteps behind you that stop when you stop… turn around.</li>
       <li>Near the end, something will hunt you. Keep her in frame. <b>She moves faster when you look away.</b></li>
+      <li>After that, it gets worse. Every one of them has a rule, and Danny's tapes tell you what it is. <b>Listen to him.</b></li>
     </ul>
     <div class="keys">
       <kbd>WASD</kbd><span>Move · <kbd>SHIFT</kbd> run · <kbd>C</kbd> crouch</span>
@@ -859,6 +862,8 @@ const SFX = {
     const src = A.ctx.createGain(); src.connect(sh); A.noise(t, dur, src, 0.35); A.osc('sawtooth', 58, t, dur, src).frequency.linearRampToValueAtTime(40, t + dur);
     const n = 30, c = new Float32Array(n); for (let i = 0; i < n; i++) c[i] = (i % 2 ? 0.15 : 1) * Math.sin(i / (n - 1) * Math.PI) + 0.01; g.gain.setValueCurveAtTime(c, t, dur);
   },
+  /* a wet tongue click: something that can't see, listening for the walls */
+  tongue(A, t, p, o) { const n = o.n || 2; for (let i = 0; i < n; i++) { const tt = t + i * rr(0.09, 0.14), g = A.out(p, 0.9 * (o.v || 1), 0.55, 2.5); A.noise(tt, 0.025, A.filt('bandpass', rr(2200, 3000), 7, g), 1); A.env(g, tt, 0.001, 1, 0.004, 0.03); } },
   /* locked door handle */
   rattle(A, t, p) { for (let i = 0; i < 5; i++) { const tt = t + i * rr(0.06, 0.11), g = A.out(p, 0.35, 0.2, 2); A.noise(tt, 0.05, A.filt('bandpass', rr(2200, 3600), 6, g), 1.3); A.env(g, tt, 0.001, 1, 0.01, 0.04); } SFX.thud(A, t + 0.02, p, { v: 0.25 }); },
   /* boards being torn off */
@@ -2069,7 +2074,7 @@ class Door {
     let near = false;
     for (const p of agents) if (Math.abs(p.y - this.center.y) < 2 && Math.hypot(p.x - this.center.x, p.z - this.center.z) < 2.4) { near = true; break; }
     if (near && !this.slamming && Math.abs(this.target - this.open) > 0.01) {
-      if (Math.abs(this.angle - this.closed) < 0.25) AudioSys.play('door', this.center);
+      if (Math.abs(this.angle - this.closed) < 0.25) { AudioSys.play('door', this.center); if (agents[0] && agents[0].distanceTo(this.center) < 3) bus.emit('pnoise', 0.5); }
       this.target = this.open; this.speed = 2.2;
     }
     const d = this.target - this.angle, st = this.speed * dt;
@@ -2261,7 +2266,7 @@ class GrandfatherClock {
     const rod = new THREE.Mesh(GEO.box, MAT.brass); rod.scale.set(0.02, 0.9, 0.02); rod.position.y = -0.45; this.pend.add(rod);
     const bob = new THREE.Mesh(GEO.cyl, MAT.brass); bob.scale.set(0.2, 0.02, 0.2); bob.rotation.x = Math.PI / 2; bob.position.y = -0.95; this.pend.add(bob);
     W.root.add(this.group, this.pend);
-    W.anim.push((t) => { this.pend.rotation.z = Math.sin(t * Math.PI) * 0.18; const mins = 58 + t / 60 * 8; this.mh.rotation.z = -mins / 60 * TAU; this.hh.rotation.z = -(11 + mins / 60) / 12 * TAU; });
+    W.anim.push((t) => { if (t >= G.p2At) { this.pend.rotation.z = 0.18; this.mh.rotation.z = -33 / 60 * TAU; this.hh.rotation.z = -(3 + 33 / 60) / 12 * TAU; return; } this.pend.rotation.z = Math.sin(t * Math.PI) * 0.18; const mins = 58 + t / 60 * 8; this.mh.rotation.z = -mins / 60 * TAU; this.hh.rotation.z = -(11 + mins / 60) / 12 * TAU; });
   }
 }
 class RockingChair {
@@ -2298,6 +2303,7 @@ class Barricade {
     W.entities.push(this); W.barricades.push(this);
   }
   break() { if (this.broken) return; this.broken = true; this.t = 0; this.col.on = false; AudioSys.play('boards', this.center); }
+  restore() { this.broken = false; this.t = 0; this.col.on = true; this.apply(-1); }
   update(dt) { if (this.broken && this.t < 3) { this.t += dt; this.apply(this.t); } }
   apply(t) {
     for (const m of this.boards) {
@@ -2313,8 +2319,8 @@ class Barricade {
 }
 /* Documents: Eleanor Hollowell's diary pages and Danny's tapes */
 class Note {
-  constructor(id, kind, pos, rotY = 0) {
-    Object.assign(this, { id, kind, pos: pos.clone(), pickedAt: Infinity });
+  constructor(id, kind, pos, rotY = 0, bornAt = -Infinity) {
+    Object.assign(this, { id, kind, pos: pos.clone(), pickedAt: Infinity, bornAt });
     const g = this.group = new THREE.Group(); g.position.copy(pos); g.rotation.y = rotY;
     if (kind === 'tape') {
       const body = new THREE.Mesh(GEO.box, MAT.tapeBody); body.scale.set(0.19, 0.028, 0.105); body.position.y = 0.014; g.add(body);
@@ -2324,7 +2330,7 @@ class Note {
     }
     W.root.add(g); W.notes.push(this);
   }
-  update(t) { this.group.visible = t < this.pickedAt; }
+  update(t) { this.group.visible = t >= this.bornAt && t < this.pickedAt; }
 }
 /* Spare camcorder batteries hidden around the house */
 class Pickup {
@@ -2337,7 +2343,7 @@ class Pickup {
     W.disposables.push(this.lblMat, glow.material);
     W.root.add(this.group);
   }
-  update(t) { this.group.visible = t < this.pickedAt; this.group.rotation.y = t * 1.2; this.group.position.y = this.pos.y + 0.03 + Math.sin(t * 2.4) * 0.02; this.lblMat.color.setHSL(0.36, 1, 0.35 + 0.2 * Math.sin(t * 6)); }
+  update(t) { this.group.visible = t >= (this.bornAt ?? -Infinity) && t < this.pickedAt; this.group.rotation.y = t * 1.2; this.group.position.y = this.pos.y + 0.03 + Math.sin(t * 2.4) * 0.02; this.lblMat.color.setHSL(0.36, 1, 0.35 + 0.2 * Math.sin(t * 6)); }
 }
 function buildPickups() {
   const spots = [[5.45, 0.9, 3.2], [-12.5, 0, 3.35], [-19.2, 0, 3.0], [14.4, 0.95, 3.6], [19.2, 0, -11.2], [18.2, 0.97, -23.6], [9.3, 0, -21.8], [15.5, -3.0, -21.2],
@@ -2464,11 +2470,16 @@ class PaleWoman {
     AudioSys.play('breath', this.shown, { n: 1, v: 1.4 });
   }
   hide() { this.active = false; }
+  /* The hunt steers her: she still only arrives in jumps */
+  puppetTo(pos, yaw, reveal) { if (this.mode !== 'puppet' || !this.active) { this.shown.copy(pos); this.group.position.copy(pos); this.opacity = Math.max(this.opacity, 0.01); } this.active = true; this.mode = 'puppet'; this.pp = pos; this.pyaw = yaw; this.preveal = reveal; }
   update(dt, t, cam) {
     if (this.active) {
       this.t += dt; this.stepT -= dt;
       let tgt = null;
-      if (this.mode === 'float') {
+      if (this.mode === 'puppet') {
+        tgt = this.pp.clone(); tgt.y = this.ground(tgt) + 0.04; this.opacity = Math.min(1, this.opacity + dt * 2); this.reveal = damp(this.reveal, this.preveal, 4, dt);
+        this.group.rotation.y = lerpAngle(this.group.rotation.y, this.pyaw, 1 - Math.exp(-10 * dt));
+      } else if (this.mode === 'float') {
         const k = Math.min(1, this.t / this.dur); tgt = V3().lerpVectors(this.a, this.b, k); tgt.y = this.ground(tgt) + 0.04;
         this.opacity = Math.min(1, this.t * 2, (this.dur - this.t) * 2 + 0.1);
         if (k >= 1) this.active = false;
@@ -2785,14 +2796,14 @@ class Crawler {
       const hand = new THREE.Mesh(GEO.hand, this.skin); hand.scale.set(sx * 0.9, -1.3, 0.9); hand.position.y = -1.0; knee.add(hand);
       return { hip, knee, sx, fz };
     });
-    this.active = false; this.alpha = 0; this.flip = 0; this.gait = 0; this.headYaw = 0; this.recSize = 8; this.focus = this.headG; this.group.visible = false;
+    this.active = false; this.alpha = 0; this.flip = 0; this.gait = 0; this.headYaw = 0; this.nvOnly = false; this.recSize = 9; this.focus = this.headG; this.group.visible = false;
     W.root.add(this.group); W.entities.push(this); W.ghostObjs.push(this.group);
   }
   place(pos, yaw, ceiling) { this.group.position.copy(pos); this.group.rotation.y = yaw; this.flip = ceiling ? 1 : 0; this.alpha = 1; this.active = true; }
   hide() { this.active = false; this.alpha = 0; }
-  update(dt, t) { this.apply(this.alpha, this.flip, this.gait, this.headYaw, t); }
-  apply(al, flip, gait, hy, t) {
-    this.group.visible = al > 0.01; if (!this.group.visible) return;
+  update(dt, t, nv) { this.apply(this.alpha, this.flip, this.gait, this.headYaw, t, nv); }
+  apply(al, flip, gait, hy, t, nv) {
+    this.group.visible = al > 0.01 && (!this.nvOnly || !!nv); if (!this.group.visible) return;
     this.skin.opacity = al; this.faceMat.opacity = al; this.hairM.opacity = al;
     this.body.rotation.z = flip > 0.5 ? Math.PI : 0;
     this.legs.forEach((l, i) => {
@@ -2803,8 +2814,8 @@ class Crawler {
     // the head turns further than a neck should allow, and on the ceiling it's upside down
     this.headG.rotation.set(0, hy, (flip > 0.5 ? Math.PI : 0) + Math.sin(t * 17) * 0.05);
   }
-  rec(a, o) { const p = this.group.position; a[o] = p.x; a[o + 1] = p.y; a[o + 2] = p.z; a[o + 3] = this.group.rotation.y; a[o + 4] = this.alpha; a[o + 5] = this.flip; a[o + 6] = this.gait; a[o + 7] = this.headYaw; }
-  play(a, b, f, o, t) { this.group.position.set(lerp(a[o], b[o], f), lerp(a[o + 1], b[o + 1], f), lerp(a[o + 2], b[o + 2], f)); this.group.rotation.y = lerpAngle(a[o + 3], b[o + 3], f); this.apply(b[o + 4], b[o + 5], lerp(a[o + 6], b[o + 6], f), lerpAngle(a[o + 7], b[o + 7], f), t); }
+  rec(a, o) { const p = this.group.position; a[o] = p.x; a[o + 1] = p.y; a[o + 2] = p.z; a[o + 3] = this.group.rotation.y; a[o + 4] = this.alpha; a[o + 5] = this.flip; a[o + 6] = this.gait; a[o + 7] = this.headYaw; a[o + 8] = this.nvOnly ? 1 : 0; }
+  play(a, b, f, o, t, nv) { this.group.position.set(lerp(a[o], b[o], f), lerp(a[o + 1], b[o + 1], f), lerp(a[o + 2], b[o + 2], f)); this.group.rotation.y = lerpAngle(a[o + 3], b[o + 3], f); this.nvOnly = b[o + 8] > 0.5; this.apply(b[o + 4], b[o + 5], lerp(a[o + 6], b[o + 6], f), lerpAngle(a[o + 7], b[o + 7], f), t, nv); }
 }
 /* A face peeking around a door frame. It pulls back the moment you look straight at it. */
 class Peeker {
@@ -2821,6 +2832,104 @@ class Peeker {
   rec(a, o) { const p = this.mesh.position; a[o] = p.x; a[o + 1] = p.y; a[o + 2] = p.z; a[o + 3] = this.mesh.rotation.y; a[o + 4] = this.alpha; a[o + 5] = this.tex; }
   play(a, b, f, o) { this.mesh.position.set(b[o], b[o + 1], b[o + 2]); this.mesh.rotation.set(0, b[o + 3], 0); this.apply(b[o + 4], b[o + 5]); }
 }
+/* The Kept: everyone the house has held on to. Grey as dust. They only move when nothing is watching,
+   and every time you look back they are standing some other way. */
+const KEPT_POSES = [
+  // shoulderX/Z and elbow for each arm, head x/z, lean
+  [0.05, -0.12, -0.1, 0.05, 0.12, -0.1, 0.25, 1.05, 0.08], // hanging, neck snapped sideways
+  [-0.2, -0.1, -0.2, -1.55, 0.12, 0, 0.1, 0.35, 0.05], // pointing at you
+  [-2.3, 0.5, -2.2, -2.3, -0.5, -2.2, 0.5, 0.1, 0.2], // hands over its face
+  [-1.35, -0.1, -0.15, -1.45, 0.1, -0.1, 0.55, -0.2, 0.32], // reaching for you
+  [-0.3, -1.3, -0.3, -0.3, 1.3, -0.3, -0.95, 0.25, -0.12], // head thrown back, arms wide
+  [0.2, -0.05, -0.6, 0.15, 0.05, -0.5, 0.9, 0.5, 0.55] // hunched over, arms dangling
+];
+class Kept {
+  constructor(i) {
+    const tint = [0x8a8882, 0x7e8286, 0x8c847c, 0x80867e, 0x88827e, 0x7a7c80][i % 6];
+    this.skin = new THREE.MeshLambertMaterial({ color: tint, emissive: 0x1a1918, transparent: true });
+    this.cloth = new THREE.MeshLambertMaterial({ color: 0x2e2b2a, emissive: 0x080706, side: THREE.DoubleSide, transparent: true });
+    this.faceMat = new THREE.MeshBasicMaterial({ map: TEX.face, transparent: true, color: 0x9a9890 });
+    W.disposables.push(this.skin, this.cloth, this.faceMat);
+    this.group = new THREE.Group(); this.body = new THREE.Group(); this.body.position.y = 0.86; this.group.add(this.body);
+    for (const sx of [-1, 1]) { const leg = new THREE.Mesh(GEO.cyl, this.skin); leg.scale.set(0.07, 0.9, 0.07); leg.position.set(sx * 0.1, 0.45, 0); this.group.add(leg); }
+    const smock = new THREE.LatheGeometry([[0.001, 0.62], [0.22, 0.6], [0.26, 0.3], [0.3, -0.1], [0.34, -0.36]].map(([x, y]) => new THREE.Vector2(x, y)), 12);
+    const pa = smock.attributes.position.array; for (let k = 0; k < pa.length; k += 3) if (pa[k + 1] < -0.2) pa[k + 1] += (Math.random() - 0.5) * 0.18;
+    this.body.add(new THREE.Mesh(smock, this.cloth));
+    const neck = new THREE.Mesh(GEO.cyl, this.skin); neck.scale.set(0.07, 0.2, 0.07); neck.position.y = 0.68; this.body.add(neck);
+    this.headG = new THREE.Group(); this.headG.position.y = 0.84; this.body.add(this.headG);
+    const head = new THREE.Mesh(GEO.sph, this.skin); head.scale.set(0.21, 0.27, 0.22); this.headG.add(head);
+    const face = new THREE.Mesh(GEO.plane, this.faceMat); face.scale.set(0.22, 0.28, 1); face.position.set(0, -0.01, 0.112); this.headG.add(face);
+    const hair = []; for (let k = 0; k < 7; k++) { const a = rr(-2.6, 2.6); hair.push([GEO.box, Math.sin(a) * 0.1, 0.02, Math.cos(a) * 0.1 - 0.02, 0, 0, 0, 0.02, rr(0.2, 0.45), 0.015]); }
+    this.hairM = new THREE.MeshBasicMaterial({ color: 0x0a0908, transparent: true }); W.disposables.push(this.hairM); this.headG.add(new THREE.Mesh(mergeParts(hair), this.hairM));
+    this.arms = [-1, 1].map((sx) => {
+      const g = new THREE.Group(); g.position.set(sx * 0.24, 0.58, 0); this.body.add(g);
+      const up = new THREE.Mesh(GEO.cyl, this.skin); up.scale.set(0.055, 0.36, 0.055); up.position.y = -0.18; g.add(up);
+      const el = new THREE.Group(); el.position.y = -0.36; g.add(el);
+      const fa = new THREE.Mesh(GEO.cyl, this.skin); fa.scale.set(0.045, 0.34, 0.045); fa.position.y = -0.17; el.add(fa);
+      const hand = new THREE.Mesh(GEO.hand, this.skin); hand.scale.set(sx * 0.8, -0.95, 0.8); hand.position.y = -0.46; el.add(hand);
+      g.userData.el = el; return g;
+    });
+    this.pose = i % KEPT_POSES.length; this.alpha = 0; this.active = false; this.recSize = 6; this.focus = this.headG; this.group.visible = false;
+    W.root.add(this.group); W.entities.push(this); W.ghostObjs.push(this.group);
+  }
+  place(pos, yaw, pose) { this.group.position.copy(pos); this.group.rotation.y = yaw; if (pose !== undefined) this.pose = pose; this.active = true; this.alpha = 1; }
+  hide() { this.active = false; this.alpha = 0; }
+  faceTo(p) { this.group.rotation.y = Math.atan2(p.x - this.group.position.x, p.z - this.group.position.z); }
+  newPose() { let k = this.pose; while (k === this.pose) k = Math.floor(Math.random() * KEPT_POSES.length); this.pose = k; }
+  update(dt, t) { this.apply(this.alpha, this.pose, t); }
+  apply(al, pose, t) {
+    this.group.visible = al > 0.01; if (!this.group.visible) return;
+    this.skin.opacity = al; this.cloth.opacity = al; this.faceMat.opacity = al * 0.95; this.hairM.opacity = al;
+    const P = KEPT_POSES[pose | 0];
+    this.arms[0].rotation.set(P[0], 0, P[1]); this.arms[0].userData.el.rotation.x = P[2];
+    this.arms[1].rotation.set(P[3], 0, P[4]); this.arms[1].userData.el.rotation.x = P[5];
+    this.headG.rotation.set(P[6], 0, P[7] + Math.sin(t * 31 + pose) * 0.012); this.body.rotation.x = P[8];
+  }
+  rec(a, o) { const p = this.group.position; a[o] = p.x; a[o + 1] = p.y; a[o + 2] = p.z; a[o + 3] = this.group.rotation.y; a[o + 4] = this.alpha; a[o + 5] = this.pose; }
+  play(a, b, f, o, t) { this.group.position.set(b[o], b[o + 1], b[o + 2]); this.group.rotation.y = b[o + 3]; this.alpha = b[o + 4]; this.pose = b[o + 5]; this.apply(this.alpha, this.pose, t); }
+}
+/* Rose. Six years old since 1961. She wants somebody to play with. */
+class RoseGhost {
+  constructor() {
+    this.skin = new THREE.MeshLambertMaterial({ color: 0xc4cad0, emissive: 0x303844, transparent: true });
+    this.gown = new THREE.MeshLambertMaterial({ color: 0xd6d4ca, emissive: 0x262624, side: THREE.DoubleSide, transparent: true });
+    this.hairM = new THREE.MeshBasicMaterial({ color: 0x050404, transparent: true });
+    this.faceMat = new THREE.MeshBasicMaterial({ map: TEX.faceRose, transparent: true });
+    W.disposables.push(this.skin, this.gown, this.hairM, this.faceMat);
+    this.group = new THREE.Group(); this.body = new THREE.Group(); this.group.add(this.body);
+    this.gownGeo = new THREE.LatheGeometry([[0.001, 0.86], [0.1, 0.84], [0.13, 0.7], [0.17, 0.4], [0.24, 0.12], [0.27, 0.1]].map(([x, y]) => new THREE.Vector2(x, y)), 16);
+    this.gownBase = this.gownGeo.attributes.position.array.slice();
+    this.body.add(new THREE.Mesh(this.gownGeo, this.gown));
+    for (const sx of [-1, 1]) {
+      const leg = new THREE.Mesh(GEO.cyl, this.skin); leg.scale.set(0.045, 0.2, 0.045); leg.position.set(sx * 0.07, 0.1, 0); this.body.add(leg);
+      const arm = new THREE.Mesh(GEO.cyl, this.skin); arm.scale.set(0.035, 0.42, 0.035); arm.position.set(sx * 0.14, 0.58, 0.02); arm.rotation.z = sx * 0.12; this.body.add(arm);
+      const hand = new THREE.Mesh(GEO.hand, this.skin); hand.scale.set(sx * 0.42, -0.45, 0.42); hand.position.set(sx * 0.165, 0.33, 0.02); this.body.add(hand);
+    }
+    this.headG = new THREE.Group(); this.headG.position.y = 1.0; this.group.add(this.headG);
+    const head = new THREE.Mesh(GEO.sph, this.skin); head.scale.set(0.2, 0.23, 0.2); this.headG.add(head);
+    const face = new THREE.Mesh(GEO.plane, this.faceMat); face.scale.set(0.2, 0.24, 1); face.position.set(0, -0.01, 0.102); this.headG.add(face);
+    const back = new THREE.Mesh(GEO.sph, this.hairM); back.scale.set(0.23, 0.25, 0.22); back.position.set(0, 0.03, -0.03); this.headG.add(back);
+    const strands = []; for (let k = 0; k < 14; k++) { const a = Math.PI * 0.45 + k / 13 * Math.PI * 1.1; strands.push([GEO.box, Math.cos(a) * 0.1, -0.24, Math.sin(a) * -0.09 - 0.02, 0, 0, 0, 0.03, rr(0.35, 0.55), 0.015]); }
+    this.headG.add(new THREE.Mesh(mergeParts(strands), this.hairM));
+    this.alpha = 0; this.crouch = 0; this.active = false; this.recSize = 6; this.focus = this.headG; this.group.visible = false;
+    W.root.add(this.group); W.entities.push(this); W.ghostObjs.push(this.group);
+  }
+  place(pos, yaw, crouch) { this.group.position.copy(pos); this.group.rotation.y = yaw; this.crouch = crouch ? 1 : 0; this.active = true; this.alpha = 1; }
+  hide() { this.active = false; this.alpha = 0; }
+  update(dt, t) { this.apply(this.alpha, this.crouch, t); }
+  apply(al, cr, t) {
+    this.group.visible = al > 0.01; if (!this.group.visible) return;
+    this.skin.opacity = al; this.gown.opacity = al; this.hairM.opacity = al; this.faceMat.opacity = al;
+    this.body.scale.y = lerp(1, 0.55, cr); this.headG.position.y = lerp(1.0, 0.6, cr) + Math.sin(t * 1.3) * 0.01;
+    const k = Math.floor(t * 1.9), sn = (Math.sin(k * 91.7) * 43758.5453) % 1;
+    this.headG.rotation.set(lerp(0, 0.2, cr), sn * 0.25, 0.3 + sn * 0.25);
+    const p = this.gownGeo.attributes.position, a = p.array, b = this.gownBase;
+    for (let i = 0; i < a.length; i += 3) { const y = b[i + 1]; if (y > 0.4) continue; const kk = 1 - y / 0.4, ang = Math.atan2(b[i + 2], b[i]); const w = Math.sin(ang * 5 + t * 2.6) * 0.06 * kk; a[i] = b[i] * (1 + w); a[i + 2] = b[i + 2] * (1 + w); }
+    p.needsUpdate = true;
+  }
+  rec(a, o) { const p = this.group.position; a[o] = p.x; a[o + 1] = p.y; a[o + 2] = p.z; a[o + 3] = this.group.rotation.y; a[o + 4] = this.alpha; a[o + 5] = this.crouch; }
+  play(a, b, f, o, t) { this.group.position.set(b[o], b[o + 1], b[o + 2]); this.group.rotation.y = b[o + 3]; this.alpha = b[o + 4]; this.crouch = b[o + 5]; this.apply(this.alpha, this.crouch, t); }
+}
 /* ════════════════════════════════════════════════════════════════════
    ═══ OPERATOR — you, holding the camcorder
    ════════════════════════════════════════════════════════════════════ */
@@ -2834,8 +2943,8 @@ const Op = {
   /* Put the operator somewhere (chapter checkpoints) */
   place(pos, yaw) { this.pos.copy(pos); this.yaw = yaw; this.pitch = -0.02; this.vy = 0; this.vel.set(0, 0, 0); this.crouch = false; this.keys = {}; this.fovT = 75; },
   addTrauma(v) { this.trauma = Math.min(1, this.trauma + v); },
-  toggleNV() { if (this.dead) return; this.nv = !this.nv; AudioSys.play(this.nv ? 'nvOn' : 'click'); AudioSys.setNV(this.nv); },
-  toggleLight() { if (this.dead) return; this.light = !this.light; AudioSys.play('click'); },
+  toggleNV() { if (this.dead) return; this.nv = !this.nv; AudioSys.play(this.nv ? 'nvOn' : 'click'); AudioSys.setNV(this.nv); bus.emit('pnoise', 0.2); },
+  toggleLight() { if (this.dead) return; this.light = !this.light; AudioSys.play('click'); bus.emit('pnoise', 0.2); },
   zoom(dy) { this.fovT = clamp(this.fovT + dy * 0.035, 20, 75); this.zoomShowT = 1.5; },
   update(dt, t) {
     // look
@@ -2856,7 +2965,7 @@ const Op = {
     if (gy > -Infinity) {
       if (this.pos.y > gy + 0.35 || this.vy < -0.5) {
         this.vy -= 22 * dt; this.pos.y = Math.max(gy, this.pos.y + this.vy * dt);
-        if (this.pos.y === gy) { if (this.vy < -6) { this.addTrauma(0.35); AudioSys.play('thud', this.pos, { v: 0.7 }); } this.vy = 0; }
+        if (this.pos.y === gy) { if (this.vy < -6) { this.addTrauma(0.35); AudioSys.play('thud', this.pos, { v: 0.7 }); bus.emit('pnoise', 0.8); } this.vy = 0; }
       } else { this.pos.y = damp(this.pos.y, gy, 25, dt); this.vy = 0; }
     }
     const hsp = Math.hypot(this.vel.x, this.vel.z);
@@ -2932,7 +3041,13 @@ const SCARE_INFO = {
   peek: { name: 'DOORWAY', desc: 'Face watching from a doorway', radius: 0.35, film: 0.45 },
   mother: { name: 'HER', desc: 'Woman matching the 1961 portrait of E. Hollowell', radius: 1.2, film: 0.5 },
   boss: { name: 'MOTHER', desc: 'Pursuit — E. Hollowell', radius: 1.6 },
-  danny: { name: 'DANNY', desc: 'Young man on the balcony (see note)', radius: 0.7, film: 0.5 }
+  danny: { name: 'DANNY', desc: 'Young man, identified as Daniel R.', radius: 0.7, film: 0.5 },
+  dannyTurn: { name: 'THE CORNER', desc: 'Figure facing the attic corner turns around', radius: 0.6, film: 0.4 },
+  kept: { name: 'THE KEPT', desc: 'Grey figures that move between frames', radius: 0.6, film: 0.8 },
+  lady: { name: 'SHE LISTENS', desc: 'Blind woman in white, moving toward sounds', radius: 0.8, film: 0.8 },
+  below: { name: 'INFRARED', desc: 'Something on the cellar ceiling (infrared only)', radius: 0.9, film: 0.6 },
+  stalker: { name: 'TALL MAN', desc: 'Tall figure advancing during light failures', radius: 1.4, film: 0.6 },
+  rose: { name: 'ROSE', desc: 'Girl, approx. six years old, hiding', radius: 0.35, film: 0.5 }
 };
 class Scare {
   constructor(type, o) {
@@ -2949,6 +3064,7 @@ const Director = {
     const add = (s) => { for (const f of s.foci) out.push({ obj: f.obj || f, radius: f.radius || SCARE_INFO[s.type].radius, scare: s, nvOnly: s.nvOnly, loud: s.loud, persistent: s.persistent }); };
     if (this.cur && (this.cur.phase === 'active' || this.cur.phase === 'after' || this.cur.phase === 'stand')) add(this.cur);
     if (this.boss && (this.boss.phase === 'active' || (this.boss.phase === 'intro' && this.boss.pt > 2.5))) add(this.boss);
+    if (Hunt.s && !Hunt.paused) add(Hunt.s);
     return out;
   },
   playerRoom() { return Nav.nearest(Op.pos).room; },
@@ -3115,7 +3231,19 @@ const Director = {
       }
       case 'danny': {
         const p = o.pos || V3(0, 4.5, -9.4);
-        const s = new Scare('danny', { room: 'foyer', pos: p.clone().setY(p.y + 1.7), intensity: 1.5 }); s.data = { p: p.clone(), seenT: 0 }; s.foci = [{ obj: G_.watcher.focus, radius: 0.7 }]; s.cueDur = 0.1; return s;
+        const s = new Scare('danny', { room: Nav.nearest(p, false).room, pos: p.clone().setY(p.y + 1.7), intensity: 1.5 }); s.data = { p: p.clone(), seenT: 0, hold: o.hold || 0, faceTo: o.faceTo || null }; s.foci = [{ obj: G_.watcher.focus, radius: 0.7 }]; s.cueDur = 0.1; return s;
+      }
+      case 'dannyTurn': {
+        // he has been facing the corner for a year
+        const sp = o.spot;
+        const s = new Scare('dannyTurn', { room: 'attic', pos: sp.p.clone().setY(sp.p.y + 1.7), intensity: 2.6, cueSound: null });
+        s.data = { spot: sp, askT: 4, danny: true }; s.foci = [{ obj: G_.watcher.focus, radius: 0.6 }];
+        s.phase = 'stand'; G_.watcher.faceless = false; G_.watcher.show(sp.p); G_.watcher.group.rotation.y = sp.yaw; return s;
+      }
+      case 'rose': {
+        const sp = o.spot;
+        const s = new Scare('rose', { room: sp.room, pos: V3(...sp.p).setY(sp.p[1] + 0.8), intensity: 1.9 });
+        s.data = { spot: sp, round: o.round || 1, foundT: 0, hintT: 2.5, found: false, endT: 0 }; s.foci = [{ obj: G_.rose.focus, radius: 0.35 }]; s.cueDur = 0.1; return s;
       }
     }
     return null;
@@ -3205,11 +3333,11 @@ const Director = {
       return;
     }
     if (s.phase === 'active') {
-      const maxT = { doll: 52, wisp: 24, piano: 16, sheet: 24, shadow: 30, follower: 18, crawler: 20, peek: 14, gallery: 12, corner: 4, danny: 60 }[s.type] || (s.type === 'mother' ? s.data.timeout + 4 : 14);
+      const maxT = { doll: 52, wisp: 24, piano: 16, sheet: 24, shadow: 30, follower: 18, crawler: 20, peek: 14, gallery: 12, corner: 4, dannyTurn: 4, danny: s.data.hold ? s.data.hold + 20 : 60, rose: 1e9 }[s.type] || (s.type === 'mother' ? s.data.timeout + 4 : 14);
       if (this.step(s, dt) || s.pt > maxT) { s.phase = 'after'; s.pt = 0; this.stopVisuals(s); }
       return;
     }
-    if (s.phase === 'after') { if (s.pt > (s.type === 'danny' || s.type === 'peek' ? 0.5 : 3)) s.phase = 'done'; }
+    if (s.phase === 'after') { if (s.pt > (s.type === 'danny' || s.type === 'peek' || s.type === 'rose' ? 0.5 : s.type === 'dannyTurn' ? 1.5 : 3)) s.phase = 'done'; }
   },
   activate(s) {
     const G_ = this.ghosts;
@@ -3255,7 +3383,12 @@ const Director = {
         if (!D.calm) { AudioSys.play('croak', D.p.clone().setY(D.p.y + 2.4), { v: 0.8 }); L_ghost(s, M.headG, 0xc0c8e0, 4.5); } else L_ghost(s, M.headG, 0x9aa8c8, 2.5);
         break;
       }
-      case 'danny': { const w = G_.watcher; w.faceless = true; w.show(s.data.p, V3(0, 0, 12)); w.alpha = 0; AudioSys.play('whisper', s.pos, { v: 0.7, dur: 1.2 }); break; }
+      case 'danny': { const w = G_.watcher; w.faceless = true; w.show(s.data.p, s.data.faceTo || V3(0, 0, 12)); w.alpha = 0; AudioSys.play('whisper', s.pos, { v: 0.7, dur: 1.2 }); break; }
+      case 'dannyTurn': {
+        const w = G_.watcher; w.faceTo(Op.pos); AudioSys.play('croak', w.group.position.clone().setY(w.group.position.y + 1.7), { v: 1.3, dur: 1.2 }); AudioSys.play('sting', null, { v: 1.2 });
+        Op.addTrauma(0.8); G.glitchKick = 1.2; G.presenceKick = 1; L_ghost(s, w.focus, 0xa0b0c0, 3); s.data.lunge = true; break;
+      }
+      case 'rose': { const sp = s.data.spot; G_.rose.place(V3(...sp.p), sp.yaw, sp.crouch); break; }
     }
   },
   /* One tick of an active scare. Returns true when finished. */
@@ -3330,7 +3463,7 @@ const Director = {
         if (d > 36 || s.pt > 28) { D.done = true; sf.vanish(); }
         return false;
       }
-      case 'corner': {
+      case 'corner': case 'dannyTurn': {
         const w = G_.watcher, D = s.data;
         if (D.lunge && s.pt > 0.45 && !D.hit) { D.hit = true; w.vanish(); bus.emit('inface', { pos: w.group.position.clone(), tex: TEX.face }); }
         if (!D.lunge && s.pt > 1.3 && !D.hit) { D.hit = true; w.vanish(); AudioSys.play('static', null, { dur: 0.4, v: 1.2 }); G.glitchKick = 1; }
@@ -3346,25 +3479,57 @@ const Director = {
         return false;
       }
       case 'mother': return this.stepMother(s, dt);
+      case 'rose': return this.stepRose(s, dt);
       case 'danny': {
         const w = G_.watcher, D = s.data, vis = Scoring.isVisible(w.focus);
+        if (D.walkOut) {
+          // he walks out of the house without you
+          const p = w.group.position; w.group.rotation.y = 0; p.z += dt * 1.3; p.x = damp(p.x, 0, 2, dt); w.alpha = p.z > 12 ? Math.max(0, w.alpha - dt * 0.8) : w.alpha;
+          if ((D.stepT = (D.stepT || 0) - dt) <= 0) { D.stepT = 0.55; AudioSys.play('step', p.clone(), { v: 0.8 }); }
+          if (w.alpha <= 0) { w.vanish(); w.faceless = false; return true; }
+          return false;
+        }
         w.alpha = Math.min(0.95, w.alpha + dt * 0.8); w.faceTo(Op.pos);
         if (vis) D.seenT += dt;
-        if (Op.pos.distanceTo(w.group.position) < 6 || (D.seenT > 5) || Op.pos.z > 12.4) { if (!D.fading) { D.fading = true; AudioSys.play('whoosh', w.group.position, { dur: 0.6, v: 0.4 }); } }
+        if (D.hold ? s.pt > D.hold : (Op.pos.distanceTo(w.group.position) < 6 || (D.seenT > 5) || Op.pos.z > 12.4)) { if (!D.fading) { D.fading = true; AudioSys.play('whoosh', w.group.position, { dur: 0.6, v: 0.4 }); } }
         if (D.fading) { w.alpha = Math.max(0, w.alpha - dt * 1.2); if (w.alpha <= 0) { w.vanish(); w.faceless = false; return true; } }
         return false;
       }
     }
     return true;
   },
+  /* Hide and seek: she giggles from her hiding place until the camera finds her */
+  stepRose(s, dt) {
+    const r = this.ghosts.rose, D = s.data, p = r.group.position, d = Op.pos.distanceTo(p);
+    if (D.found) {
+      D.endT -= dt; D.at += dt;
+      if (D.round === 2 && !D.behind && D.at > 1.0) {
+        D.behind = true; const b = this.behindPlayer(1.1);
+        if (b) { r.place(b, Math.atan2(Op.pos.x - b.x, Op.pos.z - b.z), false); setTimeoutGame(0.6, () => r.hide()); }
+        AudioSys.play('whisper', Op.pos.clone().setY(Op.pos.y + 1.2), { v: 1.3, dur: 0.9 }); HUD.caption(`<b style="color:${C_ROSE}">ROSE</b> <i>(right behind you)</i>: Found you.`, 3);
+      }
+      return D.endT <= 0;
+    }
+    if ((D.hintT -= dt) <= 0) { D.hintT = rr(6, 9); AudioSys.play(pick(['giggle', 'hum', 'giggle', 'whisper']), p.clone().setY(p.y + 0.8), { v: 1, n: 3 }); HUD.ping(p.clone().setY(p.y + 0.6), 1.2); }
+    const v = Scoring.visInfo(r.focus, 0.35), lit = !Op.dead && (Op.nv || (Op.light && d < 14));
+    if (v && lit && d < 10) D.foundT += dt; else D.foundT = Math.max(0, D.foundT - dt * 0.5);
+    if (D.foundT > 0.7) {
+      D.found = true; D.at = 0; s.peakT = G.t; G.glitchKick = 0.8;
+      if (D.round === 1) { r.crouch = 0; AudioSys.play('giggle', p.clone().setY(p.y + 1), { v: 1.6, n: 6 }); HUD.caption(`<b style="color:${C_ROSE}">ROSE</b>: You found me!`, 2.5); setTimeoutGame(1.3, () => { r.hide(); AudioSys.play('static', null, { dur: 0.4 }); }); D.endT = 2.2; }
+      else if (D.round === 2) { r.hide(); AudioSys.play('static', null, { dur: 0.4 }); D.endT = 3.2; }
+      else { r.hide(); bus.emit('inface', { pos: p.clone(), tex: TEX.faceRose }); setTimeoutGame(1.2, () => HUD.caption(`<b style="color:${C_ROSE}">ROSE</b>: ...okay. You win.`, 3)); D.endT = 3.4; }
+    }
+    return false;
+  },
   /* The figure stands in the corner, face to the wall, until you come close enough to see it breathe */
   stepCornerStand(s, dt) {
     const D = s.data, w = this.ghosts.watcher, p = D.spot.p, d = Op.pos.distanceTo(p), vis = Scoring.isVisible(w.focus);
     D.standT = (D.standT || 0) + dt;
     if (!D.called && D.standT > D.askT && !vis) { D.called = true; AudioSys.play('whisper', p.clone().setY(p.y + 1.7), { v: 0.6 }); HUD.ping(p.clone().setY(p.y + 1.6), 2); }
+    if (D.danny && !D.warned && d < 7) { D.warned = true; AudioSys.play('voice', p.clone().setY(p.y + 1.7), { pitch: 124, fs: 0.95, n: 5 }); HUD.caption(`<b style="color:${C_DANNY}">DANNY</b> <i>(facing the wall)</i>: Don't look at my face.`, 3.2); }
     D.seenT = vis ? (D.seenT || 0) + dt : 0;
     if ((vis && d < 3.6 && D.seenT > 0.4) || d < 2.0 || (D.seenT > 6 && d < 8)) { s.phase = 'cue'; s.pt = 0; s.cueT = G.t; s.cueDur = rr(0.5, 1.0); AudioSys.hush(s.cueDur + 0.3); if (!s.peakT) s.peakT = G.t; }
-    else if (D.standT > 50) { w.vanish(); s.phase = 'done'; }
+    else if (D.standT > 50 && !D.danny) { w.vanish(); s.phase = 'done'; }
   },
   /* Something behind you, keeping pace. Footsteps in time with yours. It only moves while you don't look. */
   stepFollower(s, dt) {
@@ -3513,7 +3678,8 @@ const Director = {
     if (s.type === 'shadow') G_.shadow.vanish();
     if (s.type === 'portrait') { s.data.p.scream = 0; s.data.p.glow = 0; }
     if (s.type === 'gallery') { for (const p of W.portraits) { p.scream = 0; p.glow = 0; } }
-    if (s.type === 'follower' || s.type === 'corner') G_.watcher.vanish();
+    if (s.type === 'follower' || s.type === 'corner' || s.type === 'dannyTurn') G_.watcher.vanish();
+    if (s.type === 'rose') G_.rose.hide();
     if (s.type === 'danny') { G_.watcher.vanish(); G_.watcher.faceless = false; }
     if (s.type === 'crawler') G_.crawler.hide();
     if (s.type === 'peek') G_.peeker.pullBack();
@@ -3534,7 +3700,7 @@ const Director = {
     for (const q of this.queue) if (q.opts.onDone) pending.push(q.opts.onDone);
     this.cur = null; this.queue = []; G.ghostLight = null;
     for (const fn of pending) fn(null);
-    const G_ = this.ghosts; G_.sheet.active = false; G_.wisp.active = false; G_.hands.active = false; G_.shadow.vanish(); G_.watcher.vanish(); G_.watcher.faceless = false; G_.crawler.hide(); G_.peeker.pullBack();
+    const G_ = this.ghosts; G_.sheet.active = false; G_.wisp.active = false; G_.hands.active = false; G_.shadow.vanish(); G_.watcher.vanish(); G_.watcher.faceless = false; G_.crawler.hide(); G_.peeker.pullBack(); G_.rose.hide();
   },
   later(dt, fn) { setTimeoutGame(dt, fn); },
   glitchNear(pos, amt) { const d = pos.distanceTo(Op.pos); G.glitchNear = Math.max(G.glitchNear, clamp(1 - d / 10, 0, 1) * amt); },
@@ -3562,9 +3728,24 @@ const Director = {
       [0.5, () => AudioSys.play('musicbox', W.dollHome, { slow: true })],
       [0.6, () => AudioSys.play('drag', V3(Op.pos.x, Op.pos.y + (Op.pos.y < 2 ? 4.8 : -4), Op.pos.z), { dur: 2 })],
       [0.5 + late, () => AudioSys.play('skitter', V3(Op.pos.x + rr(-3, 3), Op.pos.y + 3.6, Op.pos.z + rr(-3, 3)), { n: 10, v: 0.6 })]
-    ].filter((o) => o[0] > 0);
+    ];
+    if (Story.ch >= 8) opts.push(
+      [2.2, () => this.roseCount()],
+      [1.6, () => { AudioSys.play('breath', null, { n: 2, v: 0.5 }); }],
+      [1.2, () => { const p = behind(rr(5, 9)); for (let i = 0; i < 3; i++) setTimeoutGame(i * 0.7, () => AudioSys.play('step', p, { v: 2.4, heavy: true })); }],
+      [1.0, () => { for (let i = 0; i < 3; i++) setTimeoutGame(i * 1.6, () => AudioSys.play('clock', V3(-5.5, 2, 10), { v: 1.2 })); }],
+      [1.0, () => { const ws = W.windows.filter((w) => w.room === Nav.nearest(Op.pos).room); if (ws.length) { const w = pick(ws); AudioSys.play('thud', w.pos, { v: 1.4 }); } else AudioSys.play('thud', behind(3).setY(Op.pos.y + 1.2)); }],
+      [0.8, () => { const ns = W.nodes.filter((n) => n.on && !n.exit && Math.hypot(n.x - Op.pos.x, n.z - Op.pos.z) > 10); const n = pick(ns); AudioSys.play('scream', V3(n.x, n.y + 1.5, n.z), { v: 0.6 }); }]
+    );
+    for (let i = opts.length - 1; i >= 0; i--) if (!(opts[i][0] > 0)) opts.splice(i, 1);
     let tot = opts.reduce((a, o) => a + o[0], 0), r = rnd() * tot;
     for (const [w, fn] of opts) { r -= w; if (r <= 0) { fn(); return; } }
+  },
+  /* Rose, counting somewhere inside the walls */
+  roseCount() {
+    const n = ri(3, 8), p = (this.behindPlayer(rr(3, 6)) || Op.pos.clone()).setY(Op.pos.y + 1.2);
+    AudioSys.play('voice', p, { pitch: 330, fs: 1.3, n: 3 });
+    HUD.caption(`<b style="color:${C_ROSE}">ROSE</b> <i>(inside the walls)</i>: ...${['one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'][n - 1]}... ${['two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine', 'ten'][n - 1]}...`, 2.6);
   },
   /* Candles die one after another, the farthest first — the dark walks toward you */
   lightsOut() {
@@ -3577,7 +3758,7 @@ const Director = {
     G.freezeT = rr(0.35, 0.7); AudioSys.hush(G.freezeT + 0.3);
     if (!chance(0.6)) return;
     setTimeoutGame(G.freezeT, () => {
-      const w = this.ghosts.watcher; if (w.active || (this.cur && ['follower', 'corner', 'danny'].includes(this.cur.type))) return;
+      const w = this.ghosts.watcher; if (w.active || Story.ch >= 8 || (this.cur && ['follower', 'corner', 'danny', 'dannyTurn'].includes(this.cur.type))) return;
       const fwd = R.camera.getWorldDirection(V3()); fwd.y = 0; fwd.normalize();
       const d = rr(3.5, 7), p = V3(Op.pos.x + fwd.x * d, 0, Op.pos.z + fwd.z * d), gy = Phys.groundAt(p.x, p.z, Op.pos.y + 0.6);
       if (gy === -Infinity || Phys.blocked(R.camera.position, p.clone().setY(gy + 1.6))) return;
@@ -3590,7 +3771,7 @@ const Director = {
     const far = W.nodes.filter((n) => { if (!n.on || n.exit || n.stair) return false; const d = Math.hypot(n.x - Op.pos.x, n.z - Op.pos.z); return d > 9 && d < 24; });
     if (!far.length) { AudioSys.play('whisper', (this.behindPlayer(1.2) || Op.pos.clone()).setY(Op.pos.y + 1.6), { v: 0.8 }); return; }
     const n = pick(far), p = V3(n.x, n.y + 1.6, n.z);
-    const line = pick(Story.MIMIC);
+    const line = pick(Story.ch >= 8 ? Story.MIMIC2 : Story.MIMIC);
     AudioSys.play('voice', p, { pitch: 128, fs: 0.95, n: 7 });
     HUD.caption(`<b style="color:#9fc0e0">DANNY</b> <i>(${W.rooms[n.room].label.toLowerCase()})</i>: ${line}`, 3.2);
   },
@@ -3694,6 +3875,254 @@ const _timers = [];
 function setTimeoutGame(dt, fn) { _timers.push({ at: G.t + dt, fn }); }
 function runTimers() { for (let i = _timers.length - 1; i >= 0; i--) if (G.t >= _timers[i].at) { const f = _timers[i].fn; _timers.splice(i, 1); f(); } }
 /* ════════════════════════════════════════════════════════════════════
+   ═══ HUNTERS — part two. The things from part one come back with
+       rules, and now any of them can end the tape.
+     kept    — statues. They move only while nothing is watching them.
+     lady    — blind. She hunts by sound. Walk slow; crouch; don't run.
+     below   — on the cellar ceiling, visible only in night vision.
+               Filmed in night vision it cannot move.
+     stalker — closer every time the lights fail. Zoom in to drive it off.
+   ════════════════════════════════════════════════════════════════════ */
+const Hunt = {
+  kind: null, s: null, paused: false, kept: [], burst: 0, noise: 0, graceUntil: 0,
+  active() { return !!this.s; },
+  start(kind, o = {}) {
+    this.stop();
+    this.kind = kind; this.paused = false; this.o = o; this.burst = 0; this.noise = 0;
+    const s = this.s = new Scare(kind, { room: Nav.nearest(Op.pos).room, pos: Op.pos.clone(), intensity: 2.4, persistent: true });
+    s.phase = 'active'; s.cueT = G.t; Director.scares.push(s);
+    if (kind === 'kept') this.startKept(o);
+    else if (kind === 'lady') this.startLady(o);
+    else if (kind === 'below') this.startBelow(o);
+    else if (kind === 'stalker') this.startStalker(o);
+  },
+  /* The hunt is over (or the tape rewinds): whatever was filmed stays on the record */
+  stop() {
+    const s = this.s; if (!s) return;
+    this.s = null; Scoring.endScare(s);
+    const G_ = Director.ghosts;
+    if (this.kind === 'kept') for (const k of G_.kept) k.hide();
+    if (this.kind === 'lady') G_.sheet.hide();
+    if (this.kind === 'below') { G_.crawler.hide(); G_.crawler.nvOnly = false; }
+    if (this.kind === 'stalker') G_.shadow.vanish();
+    if (G.ghostLight && G.ghostLight.scare === s) G.ghostLight = null;
+    this.kind = null; this.kept = [];
+  },
+  update(dt) {
+    const s = this.s; if (!s) return;
+    s.t += dt; s.pt += dt;
+    // a moment to get your bearings after a rewind (or after they first turn to look at you)
+    if (this.paused || s.caught || G.t < this.graceUntil) return;
+    if (this.kind === 'kept') this.updateKept(dt);
+    else if (this.kind === 'lady') this.updateLady(dt);
+    else if (this.kind === 'below') this.updateBelow(dt);
+    else if (this.kind === 'stalker') this.updateStalker(dt);
+  },
+  /* It has you. */
+  catch(focus, tex) {
+    const s = this.s; if (!s || s.caught || G.mode !== 'play') return;
+    s.caught = true; s.intensity = 3; s.peakT = G.t; s.peakQ = 99; s.peakFocus = focus; s.tags.add('caught');
+    Face.trigger(R.camera, 1.1, tex); AudioSys.play('screech', null, { v: 1.4 }); AudioSys.play('roar', focus.getWorldPosition(V3()), { dur: 1.2, v: 0.8 });
+    Op.addTrauma(1); G.glitchKick = 1.6; G.presenceKick = 1; G.flashFx = 0.4;
+    Story.die();
+  },
+  /* Walk something toward a goal: straight if it can see it, otherwise along the waypoint graph. Returns metres moved. */
+  chase(k, mp, tp, speed, dt) {
+    const direct = Math.abs(tp.y - mp.y) < 1.2 && Math.hypot(tp.x - mp.x, tp.z - mp.z) < 14 && !Phys.blocked(_v1.set(mp.x, mp.y + 1.2, mp.z), _v2.set(tp.x, tp.y + 1.2, tp.z));
+    let goal = tp;
+    if (!direct) {
+      if (!k.path || (k.replan -= dt) <= 0) {
+        k.replan = 0.7; const a = Nav.nearest(mp, false), b = Nav.nearest(tp, false); k.path = [a, ...Nav.path(a, b)];
+        const dd = (p, q) => Math.hypot(p.x - q.x, p.z - q.z) + Math.abs(p.y - q.y);
+        if (k.path.length > 1 && dd(mp, k.path[1]) < dd(k.path[0], k.path[1])) k.path.shift();
+      }
+      while (k.path && k.path.length && Math.hypot(k.path[0].x - mp.x, k.path[0].z - mp.z) < 0.5) { if (Math.abs(k.path[0].y - mp.y) >= 1.5) { k.path = null; break; } k.path.shift(); }
+      if (k.path && k.path.length) goal = k.path[0];
+    }
+    const dx = goal.x - mp.x, dz = goal.z - mp.z, dist = Math.hypot(dx, dz); let mv = 0;
+    if (dist > 0.01) { mv = Math.min(dist, speed * dt); mp.x += dx / dist * mv; mp.z += dz / dist * mv; k.yaw = Math.atan2(dx, dz); }
+    const gy = Phys.groundAt(mp.x, mp.z, mp.y + 0.8); if (gy > -Infinity) mp.y = damp(mp.y, gy, 12, dt);
+    return mv;
+  },
+  /* A waypoint far from the player that the camera can't see */
+  farNode(minPath, rooms) {
+    const here = Nav.nearest(Op.pos), cands = [];
+    for (const n of W.nodes) {
+      if (!n.on || n.exit || n.stair || (rooms && !rooms.includes(n.room))) continue;
+      if (Math.hypot(n.x - Op.pos.x, n.z - Op.pos.z) < minPath * 0.6) continue;
+      if (!Phys.blocked(R.camera.position, V3(n.x, n.y + 1.5, n.z)) && n.room === here.room) continue;
+      const pl = Nav.pathLen(here, n); if (pl < minPath) continue;
+      cands.push([n, pl]);
+    }
+    if (!cands.length) return null;
+    cands.sort((a, b) => a[1] - b[1]); return pick(cands.slice(0, 5))[0];
+  },
+  /* ── the Kept ── */
+  startKept(o) {
+    this.kept = []; this.speed = o.speed || 2.1; this.dormant = !!o.dormant;
+    for (const k of Director.ghosts.kept) k.hide();
+    for (const sp of o.spots || []) this.addKept(V3(sp[0], sp[1], sp[2]), sp[3], sp[4]);
+    for (let i = 0; i < (o.far || 0); i++) this.addKept();
+  },
+  addKept(pos, yaw, pose) {
+    const e = Director.ghosts.kept.find((k) => !k.active); if (!e) return;
+    if (!pos) { const n = this.farNode(14); if (!n) return; pos = V3(n.x + rr(-0.4, 0.4), n.y, n.z + rr(-0.4, 0.4)); yaw = Math.atan2(Op.pos.x - pos.x, Op.pos.z - pos.z); pose = ri(0, KEPT_POSES.length - 1); }
+    e.place(pos, yaw, pose ?? ri(0, KEPT_POSES.length - 1));
+    this.kept.push({ e, path: null, replan: 0, moved: 0, stepAcc: 0, yaw });
+    this.s.foci = this.kept.map((k) => ({ obj: k.e.focus, radius: 0.6 }));
+  },
+  /* They all wake at once, in the dark */
+  wake() {
+    this.dormant = false; this.graceUntil = G.t + 2.2; G.flashOutUntil = G.t + 0.7; G.flickerUntil = G.t + 0.9; AudioSys.hush(1.2);
+    setTimeoutGame(0.35, () => { for (const k of this.kept) { const p = k.e.group.position; p.lerp(V3(Op.pos.x, p.y, Op.pos.z), 0.18); k.e.newPose(); k.e.faceTo(Op.pos); } });
+    setTimeoutGame(0.75, () => { AudioSys.play('sting', null, { v: 1.2 }); G.glitchKick = 1.1; Op.addTrauma(0.5); });
+  },
+  updateKept(dt) {
+    if (this.dormant) return;
+    for (const k of this.kept) {
+      const e = k.e, p = e.group.position, d = p.distanceTo(Op.pos);
+      const v = Scoring.visInfo(e.focus, 0.55);
+      // they are "seen" only if the lens is on them and there is light on them
+      const lit = !Op.dead && (Op.nv ? d < 24 : Op.light && G.flashOutUntil <= G.t && d < 16);
+      if (v && lit) {
+        if (k.moved > 0.4) { e.newPose(); e.faceTo(Op.pos); AudioSys.play('creak', p.clone().setY(p.y + 1.2), { dur: 0.25, v: 0.5 }); if (d < 5) { AudioSys.play('sting', null, { v: 0.5 }); G.glitchKick = Math.max(G.glitchKick, 0.5); } }
+        k.moved = 0; continue;
+      }
+      const mv = this.chase(k, p, Op.pos, this.speed, dt);
+      k.moved += mv; k.stepAcc += mv; e.faceTo(Op.pos);
+      if (k.stepAcc > 0.85) { k.stepAcc = 0; AudioSys.play('step', p.clone(), { v: 1.2, heavy: true }); }
+      // keep them from merging into one another
+      for (const o of this.kept) if (o !== k) { const q = o.e.group.position, sep = Math.hypot(q.x - p.x, q.z - p.z); if (sep < 0.7 && sep > 0.001) { p.x += (p.x - q.x) / sep * (0.7 - sep) * 0.5; p.z += (p.z - q.z) / sep * (0.7 - sep) * 0.5; } }
+      if (Math.hypot(p.x - Op.pos.x, p.z - Op.pos.z) < 1.1 && Math.abs(p.y - Op.pos.y) < 1.3) { this.catch(e.focus, TEX.face); return; }
+    }
+  },
+  /* ── the woman in white, blind ── */
+  startLady(o) {
+    const pw = Director.ghosts.sheet, p = o.pos.clone();
+    this.ld = { st: 'wander', pos: p, yaw: o.yaw || 0, goal: null, path: null, replan: 0, listenT: 1.5, clickT: 1, breathT: 3, reveal: 0, heard: null, rushT: 0 };
+    this.rooms = o.rooms || ['hallway', 'nursery'];
+    pw.puppetTo(p, this.ld.yaw, 0);
+    this.s.foci = [{ obj: pw.focus, radius: 0.8 }];
+  },
+  /* How loud the operator is right now, 0..1 */
+  playerNoise() {
+    const sp = Math.hypot(Op.vel.x, Op.vel.z);
+    let lvl = sp > 4 ? 1 : sp > 1.9 ? 0.5 : sp > 0.35 ? 0.14 : 0;
+    if (Op.crouch && sp <= 1.9) lvl = sp > 0.35 ? 0.05 : 0;
+    return Math.max(lvl, this.burst);
+  },
+  updateLady(dt) {
+    const pw = Director.ghosts.sheet, L = this.ld, mp = L.pos;
+    const lvl = this.playerNoise(); this.burst = Math.max(0, this.burst - dt * 2.5); this.noise = damp(this.noise, lvl, 12, dt);
+    const d = mp.distanceTo(Op.pos), walls = Phys.blocked(_v1.set(mp.x, mp.y + 1.5, mp.z), R.camera.position);
+    if (lvl > 0 && d < lvl * 15 * (walls ? 0.55 : 1)) {
+      L.heard = Op.pos.clone();
+      if (d < 5.5 || lvl >= 0.9) { if (L.st !== 'rush') { L.st = 'rush'; L.rushT = 0; AudioSys.play('scream', mp.clone().setY(mp.y + 1.6), { v: 0.9 }); G.glitchKick = 0.8; } }
+      else if (L.st !== 'rush') { if (L.st !== 'hunt') AudioSys.play('tongue', mp.clone().setY(mp.y + 1.7), { n: 4, v: 1.2 }); L.st = 'hunt'; }
+    }
+    let goal = null, speed = 0;
+    if (L.st === 'wander') {
+      if (!L.goal) { const ns = W.nodes.filter((n) => n.on && !n.stair && !n.exit && this.rooms.includes(n.room)); const n = pick(ns); L.goal = V3(n.x, n.y, n.z); L.path = null; }
+      goal = L.goal; speed = 0.8;
+      if (Math.hypot(goal.x - mp.x, goal.z - mp.z) < 0.4) { L.goal = null; L.st = 'listen'; L.listenT = rr(2, 4.5); }
+    } else if (L.st === 'listen') {
+      L.listenT -= dt; if (L.listenT <= 0) L.st = 'wander';
+    } else if (L.st === 'hunt' || L.st === 'rush') {
+      goal = L.heard; speed = L.st === 'rush' ? 5.0 : 1.7; L.rushT += dt;
+      if (Math.hypot(goal.x - mp.x, goal.z - mp.z) < 0.5 || L.rushT > 9) { L.listenT = L.st === 'rush' ? 2.5 : 3.5; L.st = 'listen'; L.goal = null; }
+    }
+    if (goal && speed) { this.chase(L, mp, goal, speed, dt); }
+    L.reveal = L.st === 'rush' ? 1 : L.st === 'hunt' ? 0.25 : 0;
+    pw.puppetTo(mp, L.yaw, L.reveal);
+    this.glitchNear(mp, 0.7);
+    // she clicks to hear the walls; faster when she has heard you
+    if ((L.clickT -= dt) <= 0) { L.clickT = L.st === 'hunt' || L.st === 'rush' ? rr(0.5, 0.9) : rr(1.4, 2.6); AudioSys.play('tongue', mp.clone().setY(mp.y + 1.7), { n: ri(2, 4), v: 1 }); }
+    if ((L.breathT -= dt) <= 0) { L.breathT = rr(4, 7); AudioSys.play(chance(0.5) ? 'breath' : 'hum', mp.clone().setY(mp.y + 1.7), { n: 1, v: 0.7 }); }
+    // she finds you by touch, too
+    if (Math.hypot(mp.x - Op.pos.x, mp.z - Op.pos.z) < 1.05 && Math.abs(mp.y - Op.pos.y) < 1.3) this.catch(pw.focus, TEX.face);
+  },
+  /* ── on the cellar ceiling ── */
+  startBelow(o) {
+    const c = Director.ghosts.crawler; c.nvOnly = true; c.place(V3(18.5, -0.2, -13.2), -Math.PI / 2, true); c.gait = 0; c.headYaw = 0;
+    this.cb = { skitT: 0.5, croakT: 2, frozen: false, seenAt: -99 };
+    this.s.foci = [{ obj: c.focus, radius: 0.9 }]; this.s.nvOnly = true;
+  },
+  updateBelow(dt) {
+    const c = Director.ghosts.crawler, C = this.cb, p = c.group.position, inB = Op.pos.y < -1.2;
+    const v = Scoring.visInfo(c.focus, 0.9), seen = Op.nv && !!v && !Op.dead && p.distanceTo(R.camera.position) < 20;
+    // once it has been caught in the green it waits a moment before it trusts the dark again
+    if (seen) C.seenAt = G.t;
+    const frozen = seen || G.t - C.seenAt < 1.3;
+    const dh = Math.hypot(p.x - Op.pos.x, p.z - Op.pos.z);
+    this.glitchNear(p, 0.6);
+    if (frozen) {
+      const to = V3(R.camera.position.x - p.x, 0, R.camera.position.z - p.z);
+      c.headYaw = damp(c.headYaw, -angleDiff(c.group.rotation.y, Math.atan2(to.x, to.z)), 6, dt);
+      if (!C.frozen) { C.frozen = true; AudioSys.play('croak', p.clone(), { v: 0.9, dur: 0.8 }); }
+      return;
+    }
+    C.frozen = false;
+    const tgt = inB ? Op.pos : V3(7.6, 0, -21.2), dx = tgt.x - p.x, dz = tgt.z - p.z, dist = Math.hypot(dx, dz);
+    if (dist > 0.05) {
+      const mv = Math.min(dist, 2.3 * dt); p.x = clamp(p.x + dx / dist * mv, 6.8, 19.4); p.z = clamp(p.z + dz / dist * mv, -23.4, -12.6);
+      c.group.rotation.y = lerpAngle(c.group.rotation.y, Math.atan2(dx, dz), 1 - Math.exp(-8 * dt)); c.gait += mv * 3.4; c.headYaw = damp(c.headYaw, 0, 6, dt);
+      if ((C.skitT -= dt) <= 0) { C.skitT = rr(0.35, 0.6); AudioSys.play('skitter', p.clone(), { n: ri(5, 10), v: 1 }); }
+    }
+    if ((C.croakT -= dt) <= 0) { C.croakT = rr(5, 9); AudioSys.play('croak', p.clone(), { v: 0.6, dur: 1 }); }
+    if (inB && dh < 1.25) { c.flip = 0; p.y = Op.pos.y + 0.2; this.catch(c.focus, TEX.face); }
+  },
+  /* ── the tall man ── */
+  startStalker(o) {
+    this.sk = { flick: rr(3, 4.5), gone: 0, zoomT: 0 };
+    this.s.foci = [{ obj: Director.ghosts.shadow.focus, radius: 1.4 }];
+    this.spawnStalker(18);
+  },
+  spawnStalker(minPath) {
+    const sf = Director.ghosts.shadow, n = this.farNode(minPath) || this.farNode(8);
+    if (!n) { this.sk.gone = 3; return; }
+    sf.show(V3(n.x, n.y, n.z), Math.atan2(Op.pos.x - n.x, Op.pos.z - n.z)); sf.alpha = 0;
+    AudioSys.play('step', V3(n.x, n.y, n.z), { v: 3, heavy: true });
+  },
+  /* One jump closer, along the halls */
+  stalkStep() {
+    const sf = Director.ghosts.shadow, mp = sf.group.position, tp = Op.pos;
+    const total = Math.hypot(tp.x - mp.x, tp.z - mp.z) + Math.abs(tp.y - mp.y), want = Math.max(2.4, total * rr(0.3, 0.4));
+    let np = null;
+    if (Math.abs(tp.y - mp.y) < 1.2 && !Phys.blocked(_v1.set(mp.x, mp.y + 1.5, mp.z), _v2.set(tp.x, tp.y + 1.5, tp.z))) {
+      const k = Math.min(want, Math.max(0, total - 2.6)) / total; np = mp.clone().lerp(tp, k);
+    } else {
+      const a = Nav.nearest(mp, false), path = [a, ...Nav.path(a, Nav.nearest(tp))]; let left = want, cur = mp.clone();
+      for (const n of path) { const seg = cur.distanceTo(V3(n.x, n.y, n.z)); if (seg >= left) { cur.lerp(V3(n.x, n.y, n.z), left / Math.max(seg, 1e-3)); left = 0; break; } left -= seg; cur.set(n.x, n.y, n.z); }
+      np = cur;
+    }
+    const gy = Phys.groundAt(np.x, np.z, np.y + 1); if (gy > -Infinity) np.y = gy;
+    mp.copy(np); sf.group.rotation.y = Math.atan2(tp.x - mp.x, tp.z - mp.z); AudioSys.play('step', mp.clone(), { v: 3.5, heavy: true });
+  },
+  updateStalker(dt) {
+    const sf = Director.ghosts.shadow, S = this.sk;
+    if (S.gone > 0) { S.gone -= dt; if (S.gone <= 0) this.spawnStalker(16); return; }
+    const mp = sf.group.position, d = mp.distanceTo(Op.pos), v = Scoring.visInfo(sf.focus, 1.4);
+    sf.group.rotation.y = Math.atan2(Op.pos.x - mp.x, Op.pos.z - mp.z);
+    this.glitchNear(mp, 0.8);
+    // it can't stand being looked at up close
+    if (v && R.camera.fov < 38 && !Op.dead && sf.alpha > 0.5) {
+      S.zoomT += dt;
+      if (S.zoomT > 0.5) { S.zoomT = 0; sf.vanish(); S.gone = rr(14, 22); AudioSys.play('static', mp.clone(), { dur: 0.6, v: 1.6 }); AudioSys.play('whoosh', mp.clone(), { dur: 0.5, v: 1 }); G.glitchKick = 1; this.s.tags.add('banished'); HUD.pop('IT BACKED OFF', 'big'); return; }
+    } else S.zoomT = Math.max(0, S.zoomT - dt);
+    S.flick -= dt;
+    if (S.flick <= 0) {
+      S.flick = rr(3.2, 5.2) * clamp(d / 14, 0.5, 1);
+      G.flickerUntil = G.t + 0.55; G.flashOutUntil = G.t + 0.45; AudioSys.play('static', null, { dur: 0.3, v: 0.7 });
+      // close enough, and the next time the lights go it is on you
+      const close = d < 4.5;
+      setTimeoutGame(0.22, () => { if (this.kind !== 'stalker' || this.sk !== S || S.gone > 0 || this.paused) return; if (close) this.catch(sf.focus, TEX.face); else this.stalkStep(); });
+      if (close) AudioSys.play('breath', mp.clone().setY(mp.y + 2.4), { n: 1, v: 1.6 });
+    }
+  },
+  glitchNear(pos, amt) { Director.glitchNear(pos, amt); }
+};
+bus.on('pnoise', (v) => { Hunt.burst = Math.max(Hunt.burst, v); });
+/* ════════════════════════════════════════════════════════════════════
    ═══ STORY — Danny's tapes, Eleanor Hollowell's diary, six chapters.
        The house opens one room at a time; the Director fills them.
    ════════════════════════════════════════════════════════════════════ */
@@ -3708,12 +4137,22 @@ const STORY_TEXT = {
     ['big red', 'HOLLOWELL — PLAY ME'],
     'It\'s October 31st again. I\'m going in with his camera.'
   ],
-  epilogue: [
+  epilogueLeft: [
     'I came out of Hollowell Manor at 3:33 AM.',
+    'Danny didn\'t. He held the door for me, and then it closed between us.',
     'At the gate I turned around. Every window in the house was dark except one. The nursery.',
     'I could hear two children laughing. One of them sounded like him.',
     'The sheriff took the tape on November 3rd. He says there\'s nothing on it. A dark house. Somebody breathing.',
     'He\'s wrong.',
+    ['big', 'WATCH IT YOURSELF.']
+  ],
+  epilogueStayed: [
+    ['red', 'NOV 1, 1998 — STATEMENT OF DANIEL R.'],
+    'My name is Daniel. At 3:41 this morning I walked out of Hollowell Manor. A year and a day after I walked in.',
+    'Somebody came in after me. With my camera. I told them not to come. They never listen.',
+    'They stayed so I could go.',
+    'I went back to the door every night for a month. It doesn\'t open anymore. Sometimes, from the porch, I can hear them playing.',
+    'The sheriff says there\'s nothing on the tape.',
     ['big', 'WATCH IT YOURSELF.']
   ],
   death: [
@@ -3793,6 +4232,62 @@ const DOCS = {
   d3: { kind: 'diary', head: 'E. H. — OCTOBER 30, 1961', html: 'The storm took the power. Rose would not stop screaming. She bit me.<br><br>I put her in the attic to calm herself. Only for the night. I locked the door so she would not wander in the dark and fall on the stairs.<br><br>She was crying for her doll. I told her she could have it back when she was good.' },
   d4: { kind: 'diary', head: 'E. H. — OCTOBER 31, 1961', html: 'I cannot hear her crying anymore.<br><br>I cannot hear her at all.<br><br>I went up with the lamp and the key, and I could not make my hand turn it.<br><br>I will go up in the morning.<br><br><span class="scrawl">I will go up in the morning.</span>' },
   d5: { kind: 'diary', head: 'E. H. — (UNDATED)', html: 'They say it was the cold. A child that small, a broken window, a storm. They say it was no one\'s fault.<br><br>Harold has gone. The servants have gone. The house is so quiet.<br><br>No one will leave this house again. I will keep everyone who comes here. I will keep them safe. I will keep them <span class="scrawl">quiet</span>.' },
+  t6: { kind: 'tape', title: 'TAPE 6 — FOYER — NOVEMBER 2, 1997', lines: [
+    [0.5, 'fx', '(the foyer. the clock says 3:33. it always says 3:33.)'],
+    [1.4, 'd', 'Day two. I think. The clock doesn\'t move, and it never gets light outside.'],
+    [3.6, 'd', 'I found the front door. I opened it. I walked out onto the porch... and I was standing in the foyer again.'],
+    [4.8, 'd', 'There are people in here. Standing. Facing the walls. I thought they were statues.'],
+    [3.8, 'd', 'They\'re not statues. When the light\'s on them, they don\'t move. When it isn\'t...'],
+    [3.6, 'fx', '(something heavy steps, right next to the microphone)', 'step'],
+    [2.0, 'd', 'Don\'t turn the light off. Don\'t let the battery die. Don\'t look away from them.'],
+    [3.8, 'd', 'There\'s a tape in the library that isn\'t mine. On the fireplace. Somebody was here before me.']
+  ] },
+  pr1: { kind: 'tape', title: 'REEL 1 — W. PRITCHARD — OCTOBER 31, 1979', lines: [
+    [0.5, 'fx', '(8mm film. no sound for a long time. then a man clears his throat.)'],
+    [1.8, 'p', 'Walter Pritchard, county historical society. It is Halloween, 1979, and I have been inside this house for... I don\'t know how long.'],
+    [5.2, 'p', 'There were four of us when we came in. Now there are four of them. Standing in the foyer with their backs to me.'],
+    [4.4, 'p', 'The servants never left in 1961. Nobody leaves. The house keeps them. It keeps everyone.'],
+    [4.4, 'p', 'Upstairs there is a woman in white who cannot see. She listens. Whatever you do up there, do it quietly.'],
+    [4.6, 'p', 'And the little girl. She only wants somebody to play with.'],
+    [3.4, 'fx', '(a child laughs, very close to the lens)', 'giggle'],
+    [2.2, 'p', 'I am going to try the basement. There has to be another way out.']
+  ] },
+  d7: { kind: 'diary', head: 'HOLLOWELL COUNTY GAZETTE — NOVEMBER 4, 1961', html: '<b style="font-style:normal;letter-spacing:1px">GIRL, 6, FOUND DEAD IN LOCKED ATTIC OF HOLLOWELL MANOR</b><br><br>The body of Rose Hollowell, 6, was discovered Thursday in the locked attic of the family home on Hollowell Road. The county coroner gave the cause of death as exposure.<br><br>Her mother, Mrs. Eleanor Hollowell, 34, could not be located for comment. Household staff told deputies that Mrs. Hollowell went up to the attic "with the key" on the morning of November 1st.<br><br><b>She has not been seen since.</b> Four members of the household staff are also unaccounted for.' },
+  t8: { kind: 'tape', title: 'TAPE 8 — UPSTAIRS HALL — DAY 40', lines: [
+    [0.5, 'fx', '(whispering. the picture is almost black.)'],
+    [1.4, 'd', 'Day forty. I have to whisper up here. She\'s blind. The woman in white. The hair over her face.'],
+    [4.4, 'd', 'She lives in the walls. She\'s the one Rose used to call her real mother.'],
+    [3.8, 'd', 'She hears everything. Footsteps. Doors. The click of the camera. If you run up here, she finds you.'],
+    [4.6, 'fx', '(a wet clicking sound, like a tongue, somewhere down the hall)', 'tongue'],
+    [2.6, 'd', 'Walk slow. Crouch. Stand still if she\'s close. She clicks so she can hear where the walls are.'],
+    [4.4, 'd', 'Rose drew something for me. It\'s on the floor of her room. I don\'t want to look at it again.']
+  ] },
+  d8: { kind: 'diary', head: '(CRAYON ON PAPER, NURSERY FLOOR)', html: '<span class="child">ME AND MY NEW BROTHER DANNY<br><br>WE PLAY EVRY NIGHT<br>HE IS GOOD AT HIDING<br><br>MOMMY IS SLEEPING NOW<br>THE LADY IS NICE TO ME<br>NOBODY IS ALOWED TO GO HOME</span><br><br><i>Below the words, two stick figures hold hands. The tall one holds a camera. In the corner of the page a third figure has been colored in completely black, so hard the crayon tore the paper.</i>' },
+  t9: { kind: 'tape', title: 'TAPE 9 — BASEMENT — DAY 211', lines: [
+    [0.5, 'fx', '(night vision. everything green. something dripping.)'],
+    [1.4, 'd', 'Day two hundred and eleven. I don\'t sleep. I don\'t eat. I don\'t think I\'m alive. I don\'t think I\'m dead.'],
+    [4.8, 'd', 'There\'s something on the ceiling down here. It doesn\'t show up in the light. Only in the green.'],
+    [4.0, 'd', 'When the green is on it, it can\'t move. When it isn\'t... it comes.'],
+    [3.6, 'fx', '(skittering, directly above the microphone)', 'skitter'],
+    [2.2, 'd', 'Pritchard left his camera by the furnace. He never came back for it.'],
+    [4.0, 'd', 'Keep the night vision on. Keep it on the ceiling. And pray the battery holds.']
+  ] },
+  pr2: { kind: 'tape', title: 'REEL 2 — W. PRITCHARD — (UNDATED)', lines: [
+    [0.5, 'fx', '(8mm. the picture is upside down.)'],
+    [1.6, 'p', 'If you are watching this, I am still here. I am always going to be here.'],
+    [4.2, 'p', 'There is no other way out. I looked. For years, I think.'],
+    [3.6, 'p', 'The girl decides. She decides who stays and who goes home. Play her game. Find her.'],
+    [4.4, 'p', 'But she only ever lets one of you go.'],
+    [3.2, 'fx', '(the camera falls. something drags it away into the dark.)', 'drag']
+  ] },
+  t10: { kind: 'tape', title: 'TAPE 10 — ATTIC — DAY 365', lines: [
+    [0.5, 'fx', '(the attic. the camera is pointed at a wall.)'],
+    [1.4, 'd', 'Day three sixty-five. It\'s Halloween again. I can feel somebody coming in through the front door.'],
+    [4.4, 'd', 'I think it\'s you. Please be you. Please don\'t be you.'],
+    [3.6, 'd', 'There\'s a tall one up here. Every time the lights go out, it\'s closer. It hates being looked at. Up close. Zoom in on it.'],
+    [5.4, 'd', 'I\'m in the corner. By the window. I face the wall so I don\'t have to see what I look like now.'],
+    [4.6, 'd', 'Come find me. Don\'t look at my face.']
+  ] },
   d6: { kind: 'diary', head: '(PENCIL, ON THE BACK OF A CHILD\'S DRAWING)', html: '<span class="child">MOMMY I AM SORRY I WAS BAD<br>I WILL BE GOOD<br>MY DOLLY IS COLD<br>MY DOLLY IS COLD<br>PLEASE LET US OUT</span><br><br><span class="scrawl">Mother will find you. Mother will find you. Mother will find you. Mother will find you.</span>' }
 };
 /* Where Danny left things: [id, kind, position, yaw] */
@@ -3803,6 +4298,23 @@ const NOTES = [
   ['t4', 'tape', [13.2, -3.998, -20.5], 0.7], ['d5', 'diary', [16.9, -3.996, -19.6], 2.8],
   ['t5', 'tape', [7.9, 9.002, 8.4], 0.4], ['d6', 'diary', [17.4, 9.004, 5.6], 1.9]
 ];
+/* Part two: things the house leaves for you after it shuts the door */
+const NOTES2 = [
+  ['t6', 'tape', [-4.95, 0.002, 10.0], 0.5], ['pr1', 'tape', [-19.45, 1.622, -3.9], 1.2], ['d7', 'diary', [2.2, 4.524, -9.6], 0.3],
+  ['t8', 'tape', [-5.35, 5.352, -11.25], 0.2], ['d8', 'diary', [-14.6, 4.524, 1.9], 2.5], ['t9', 'tape', [9.2, -3.998, -22.6], 0.8],
+  ['pr2', 'tape', [16.6, -3.998, -21.4], 2.0], ['t10', 'tape', [16.2, 9.002, 2.4], 1.0]
+];
+/* The Kept, where they stand when the door slams: [x, y, z, yaw, pose] */
+const KEPT_VII = [[1.6, 0, 4.8, Math.PI, 5], [4.4, 0, 1.2, Math.PI / 2, 0], [-12.8, 0, -9.9, Math.PI, 2]];
+const LADY_START = { pos: V3(-16, 4.5, -10), yaw: Math.PI / 2 };
+const DANNY_CORNER = { p: V3(6.7, 9, 11.3), yaw: Math.atan2(-0.7, 0.7) };
+/* Rose's hiding places */
+const ROSE_SPOTS = [
+  { room: 'library', p: [-19.1, 0, 2.3], yaw: 0.8, crouch: 1 }, { room: 'dining', p: [17.9, 0, -4.0], yaw: -Math.PI / 2, crouch: 1 },
+  { room: 'kitchen', p: [18.4, 0, -14.4], yaw: -2.4, crouch: 1 }, { room: 'foyer', p: [-1.2, 0, -11.2], yaw: 0, crouch: 1 },
+  { room: 'nursery', p: [-18.6, 5.0, -6.3], yaw: Math.PI / 2, crouch: 1 }, { room: 'hallway', p: [18.3, 4.5, -9.2], yaw: -2.2, crouch: 0 },
+  { room: 'basement', p: [17.4, -4, -14.2], yaw: -2.5, crouch: 1 }, { room: 'attic', p: [17.2, 9, 11.4], yaw: Math.PI, crouch: 1 }
+];
 const CHAPTERS = {
   1: { num: 'I', title: 'THE HOUSE', obj: 'Danny\'s first tape was recorded in the library.', rooms: ['foyer', 'library'] },
   2: { num: 'II', title: 'DINNER FOR TWO', obj: 'The dining room door opened by itself.', rooms: ['dining', 'kitchen'] },
@@ -3810,13 +4322,20 @@ const CHAPTERS = {
   4: { num: 'IV', title: 'THE CELLAR', obj: 'Something is knocking in the basement.', rooms: ['basement'] },
   5: { num: 'V', title: 'THE ATTIC', obj: 'The way to the attic is open.', rooms: ['stairwell', 'attic'] },
   6: { num: 'VI', title: 'BRING HER HOME', obj: 'BRING THE DOLL TO ROSE\'S CRIB · KEEP HER IN FRAME', alert: true, rooms: [] },
-  7: { obj: 'Rose is home.', rooms: [] }
+  7: { obj: 'Rose is home.', rooms: [] },
+  8: { part: 'PART TWO · ', num: 'VII', title: 'NOBODY LEAVES', obj: 'Someone is standing in the foyer.', rooms: ['foyer', 'library', 'dining', 'kitchen'] },
+  9: { num: 'VIII', title: 'HUSH', obj: 'Go upstairs. Quietly.', rooms: ['hallway', 'nursery'] },
+  10: { num: 'IX', title: 'BELOW', obj: 'Something is knocking in the basement.', rooms: ['basement'] },
+  11: { num: 'X', title: 'DANNY', obj: 'The way to the attic is open. Danny is up there.', rooms: ['stairwell', 'attic'] },
+  12: { num: 'XI', title: 'HIDE AND SEEK', obj: 'Find Rose.', alert: true, rooms: [] },
+  13: { obj: 'The front door is open.', rooms: [] }
 };
 const CRIB = V3(-18.6, 4.5, -6.3), DOLL_ATTIC = V3(13.9, 9.0, 11.1), ATTIC_RESPAWN = V3(13, 9, 4);
 const Story = {
+  MIMIC2: ['Keep the light on them.', 'I\'m up here...', 'Don\'t let the battery die.', 'She can hear you.', 'Don\'t run.', 'Why did you come back?', 'It\'s right behind you.', 'Don\'t look at my face.'],
   MIMIC: ['Over here...', 'It\'s me. I\'m in here.', 'Why did you come?', 'Don\'t look at her.', 'I can hear you breathing.', 'Help me... please...', 'Turn around.', 'You shouldn\'t have come here.', 'She\'s right behind you.'],
   reset() {
-    Object.assign(this, { ch: 0, flags: {}, rooms: new Set(), docs: new Set(), deaths: 0, target: null, portraitT: 0, checkpoint: null, knockT: 6, humT: 4, chStart: 0, doc: null, cardDone: null, onReadDone: null });
+    Object.assign(this, { ch: 0, flags: {}, rooms: new Set(), docs: new Set(), deaths: 0, round: 0, roundToken: 0, target: null, portraitT: 0, checkpoint: null, knockT: 6, humT: 4, chStart: 0, doc: null, cardDone: null, onReadDone: null });
     $('prompt').classList.remove('show'); $('story').classList.add('hidden'); $('doc').classList.add('hidden'); $('chapter').classList.remove('show');
   },
   /* Called once the world is built: documents, boarded-up stairs, locked doors */
@@ -3829,16 +4348,18 @@ const Story = {
     W.dollHome = V3(-8.3, 5.0, 2.55); Director.doll.place(W.dollHome, V3(-12, 4.5, -2)); Director.doll.visible = true;
   },
   open(room) { return this.rooms.has(room); },
-  lateness() { return clamp((this.ch - 1) / 5, 0, 1); },
-  gap() { return [30, 28, 25, 22, 20, 18, 99, 99][this.ch] || 25; },
-  scaresOn() { return this.ch >= 1 && this.ch <= 5 && G.t - this.chStart > 10; },
-  dreadOn() { return this.ch >= 1 && this.ch <= 5 && G.t > 16; },
-  dreadGap() { const k = this.lateness(); return lerp(rr(10, 16), rr(6, 11), k); },
-  dreadScale() { return this.ch >= 7 ? 0.3 : 1; },
-  lightTarget() { return this.ch >= 7 ? 1 : lerp(1, 0.55, this.lateness()); },
+  part2() { return this.ch >= 8; },
+  lateness() { return this.ch >= 8 ? 1 : clamp((this.ch - 1) / 5, 0, 1); },
+  gap() { return this.ch >= 8 ? 26 : [30, 28, 25, 22, 20, 18, 99, 99][this.ch] || 25; },
+  scaresOn() { return ((this.ch >= 1 && this.ch <= 5) || (this.ch >= 8 && this.ch <= 11)) && G.t - this.chStart > 12; },
+  dreadOn() { return ((this.ch >= 1 && this.ch <= 5) || (this.ch >= 8 && this.ch <= 12)) && G.t > 16; },
+  dreadGap() { if (this.ch >= 8) return rr(6, 10); const k = this.lateness(); return lerp(rr(10, 16), rr(6, 11), k); },
+  dreadScale() { return this.ch === 7 || this.ch >= 13 ? 0.3 : this.ch >= 8 ? 1.4 : 1; },
+  lightTarget() { return this.ch >= 13 ? 0.8 : this.ch >= 8 ? 0.35 : this.ch === 7 ? 1 : lerp(1, 0.55, this.lateness()); },
   /* What can happen right now: [type, weight, max per chapter] */
   pool() {
     const c = this.ch, P = [];
+    if (c >= 8 && c <= 11) { P.push(['peek', 2.4, 2], ['hands', 2, 1], ['wisp', 1.6, 1]); if (c === 8) P.push(['piano', 1, 1], ['chair', 1.4, 1]); return P; }
     if (c < 1 || c > 5) return P;
     P.push(['hands', 2.6, 1], ['sheet', 3, 1], ['wisp', 2.2, 1], ['shadow', 2.6, 1], ['follower', 2.6, 1], ['peek', 2.4, 2], ['corner', 2.8, 1], ['crawler', 2.6, 1]);
     if (c >= 2 || G.t > 110) P.push(['inface', 2, 1]);
@@ -3852,11 +4373,11 @@ const Story = {
     this.ch = n; Director.used = {}; this.chStart = G.t; this.checkpoint = { pos: Op.pos.clone(), yaw: Op.yaw };
     const c = CHAPTERS[n];
     for (const r of c.rooms) this.rooms.add(r);
-    if (c.num && !o.noCard) this.card(c.num, c.title);
+    if (c.num && !o.noCard) this.card(c.num, c.title, c.part);
     HUD.objective(c.obj, !!c.alert);
     Director.next = Math.max(Director.next, G.t + (n === 1 ? 32 : 16));
   },
-  card(num, title) { $('chapN').textContent = 'CHAPTER ' + num; $('chapT').textContent = title; $('chapter').classList.add('show'); HUD.chapUntil = G.t + 4.5; AudioSys.play('static', null, { dur: 0.3, v: 0.4 }); },
+  card(num, title, part = '') { $('chapN').textContent = part + 'CHAPTER ' + num; $('chapT').textContent = title; $('chapter').classList.add('show'); HUD.chapUntil = G.t + 4.5; AudioSys.play('static', null, { dur: 0.3, v: 0.4 }); },
   /* ── the opening: cards, then the tape that came in the mail ── */
   begin() {
     this.reset(); HUD.show(false);
@@ -3893,13 +4414,13 @@ const Story = {
   read(id, done) {
     const d = DOCS[id]; G.mode = 'reading'; Rec.paused = true; this.onReadDone = done || null;
     this.doc = { id, d, t: 0, i: 0, next: d.kind === 'tape' ? d.lines[0][0] : 0 };
-    AudioSys.play(d.kind === 'tape' ? 'tape' : 'page'); AudioSys.setAmbience(0.4, 0.1);
+    AudioSys.play(d.kind === 'tape' ? 'tape' : 'page'); AudioSys.setAmbience(0.4, 0.1); bus.emit('pnoise', 0.3);
     $('docPaper').classList.toggle('hidden', d.kind === 'tape'); $('docTape').classList.toggle('hidden', d.kind !== 'tape');
     if (d.kind === 'tape') {
       $('docTapeTitle').textContent = d.title;
       $('docTapeLines').innerHTML = d.lines.map(([, who, text]) => {
         if (who === 'fx') return `<div class="ln fx">${escapeHTML(text)}</div>`;
-        const nm = who === 'r' ? `<b style="color:${C_ROSE}">???</b>` : `<b style="color:${C_DANNY}">DANNY</b>`;
+        const nm = who === 'r' ? `<b style="color:${C_ROSE}">???</b>` : who === 'p' ? '<b style="color:#c8b890">PRITCHARD</b>' : `<b style="color:${C_DANNY}">DANNY</b>`;
         return `<div class="ln${who === 'r' ? ' kid' : ''}">${nm}: ${escapeHTML(text)}</div>`;
       }).join('');
       $('docHint').textContent = '[E] SKIP · [E] AGAIN TO STOP THE TAPE';
@@ -3914,6 +4435,7 @@ const Story = {
       el.classList.add('on');
       const words = text.split(' ').length;
       if (who === 'd') AudioSys.play('voice', null, { pitch: 128, fs: 0.95, n: clamp(Math.round(words / 2), 2, 12) });
+      else if (who === 'p') AudioSys.play('voice', null, { pitch: 98, fs: 0.85, n: clamp(Math.round(words / 2), 2, 12) });
       else if (who === 'r') { AudioSys.play('voice', null, { pitch: 330, fs: 1.3, n: clamp(Math.round(words / 2), 2, 8) }); AudioSys.play('whisper', null, { v: 0.35, dur: 1 }); }
       if (sfx) AudioSys.play(sfx, null, sfx === 'pianoNote' ? { m: 57, v: 0.15 } : { v: 0.6, dur: 0.6, n: 3 });
       D.i++; if (D.i < D.d.lines.length) D.next = D.t + D.d.lines[D.i][0];
@@ -3958,6 +4480,138 @@ const Story = {
       }) }));
     }
     if (id === 't5' && !f.t5) { f.t5 = true; HUD.objective('Take Rose\'s doll. Put her back in her crib.'); HUD.hint('The doll is by the round window.', 4); }
+    if (id === 't6' && !f.t6) {
+      f.t6 = true; Hunt.wake(); this.cp();
+      HUD.objective('THE KEPT MOVE WHEN NO LIGHT IS ON THEM · Get to the library', true);
+      setTimeoutGame(1.5, () => HUD.hint('Keep your light on them. Walk backwards if you have to. Don\'t let the battery die.', 5));
+    }
+    if (id === 'pr1' && !f.pr1) {
+      f.pr1 = true; G.flashOutUntil = G.t + 0.9; G.flickerUntil = G.t + 1.2; AudioSys.play('static', null, { dur: 0.6 });
+      setTimeoutGame(0.5, () => Hunt.stop());
+      setTimeoutGame(1.6, () => { this.bars.stairs.break(); Op.addTrauma(0.3); HUD.ping(V3(0, 1, 2.3), 3); this.setChapter(9); });
+    }
+    if (id === 't8' && !f.t8) {
+      f.t8 = true; Hunt.start('lady', { pos: LADY_START.pos.clone(), yaw: LADY_START.yaw }); this.cp();
+      HUD.objective('SHE HUNTS BY SOUND · Don\'t run · Crouch [C] · Find Rose\'s room', true);
+      setTimeoutGame(1.2, () => HUD.hint('Watch the AUDIO meter. Walking is loud near her. Crouch-walking is silent. Doors make noise.', 6));
+    }
+    if (id === 'd8' && !f.d8) {
+      f.d8 = true; const pw = Director.ghosts.sheet.group.position.clone();
+      AudioSys.play('scream', pw.setY(pw.y + 1.6), { v: 1.2 }); G.flickerUntil = G.t + 1; Hunt.stop();
+      setTimeoutGame(1.8, () => { this.knock(3); this.bars.kitchen.break(); this.setChapter(10); });
+    }
+    if (id === 't9' && !f.t9) {
+      f.t9 = true; Hunt.start('below'); this.cp();
+      HUD.objective('IT ONLY SHOWS ON NIGHT VISION · It can\'t move while you film it · Find Pritchard\'s camera by the furnace', true);
+      if (!f.batt9) { f.batt9 = true; for (const q of [[11.2, -3.99, -13.6], [18.4, -3.99, -19.5]]) { const pk = new Pickup(V3(...q)); pk.bornAt = G.t; W.pickups.push(pk); } }
+      setTimeoutGame(1.2, () => HUD.hint('Night vision [F]. Keep it on the ceiling.', 4));
+    }
+    if (id === 'pr2' && !f.pr2) {
+      f.pr2 = true; const c = Director.ghosts.crawler.group.position.clone();
+      AudioSys.play('screech', c, { v: 0.9 }); AudioSys.play('skitter', c, { n: 30, v: 1.6 }); G.glitchKick = 1; Hunt.stop();
+      setTimeoutGame(2.2, () => { this.bars.attic.break(); AudioSys.play('footstepsAbove', V3(18, 9.5, -4), { v: 1.2 }); this.setChapter(11); });
+    }
+    if (id === 't10' && !f.t10) {
+      f.t10 = true; this.armDanny(); this.cp();
+      HUD.objective('THE TALL ONE COMES CLOSER WHEN THE LIGHTS FAIL · Zoom in on it · Find Danny', true);
+      setTimeoutGame(1.2, () => HUD.hint('Zoom in (mouse wheel) on the tall one to drive it back.', 5));
+    }
+  },
+  cp() { this.checkpoint = { pos: Op.pos.clone(), yaw: Op.yaw }; },
+  /* ── PART TWO: the door that doesn't open ── */
+  partTwo() {
+    const f = this.flags; if (f.p2) return; f.p2 = true;
+    Director.clear(); W.frontDoor.shut(); W.nodeById.f_exit.on = false;
+    G.p2At = G.t;
+    for (const src of W.sources) if (src.flick !== 'fire') src.off.push([G.t, 1e9]);
+    G.lightDim = 0.3; G.flashOutUntil = G.t + 2.4; G.flickerUntil = G.t + 2.4; AudioSys.hush(4); Op.addTrauma(0.5);
+    for (const p of W.portraits) p.setEmpty(1);
+    HUD.objective('');
+    setTimeoutGame(1.3, () => { const b = (Director.behindPlayer(1.0) || Op.pos.clone()).setY(Op.pos.y + 1.1); AudioSys.play('voice', b, { pitch: 330, fs: 1.3, n: 5 }); HUD.caption(`<b style="color:${C_ROSE}">ROSE</b> <i>(right behind you)</i>: Don't go. We didn't play yet.`, 3.5); });
+    for (let i = 0; i < 3; i++) setTimeoutGame(2.6 + i * 1.3, () => AudioSys.play('clock', V3(-5.5, 2, 10), { v: 1.3 }));
+    setTimeoutGame(3.6, () => this.p2Setup());
+  },
+  p2Setup() {
+    this.bars.stairs.restore(); this.bars.kitchen.restore(); this.bars.attic.restore();
+    for (const [id, kind, p, r] of NOTES2) new Note(id, kind, V3(...p), r, G.t);
+    this.decals();
+    this.rooms = new Set();
+    this.setChapter(8);
+    Hunt.start('kept', { dormant: true, spots: KEPT_VII, speed: 2.0 });
+    setTimeoutGame(7, () => { if (!this.flags.t6) HUD.hint('Danny\'s tape is by the grandfather clock.', 4); });
+  },
+  /* Small handprints, all the way up the walls */
+  decals() {
+    const m = new THREE.MeshBasicMaterial({ map: TEX.hand, color: 0x5a1612, transparent: true, depthWrite: false }); W.disposables.push(m);
+    const g = W.p2decals = new THREE.Group(); W.root.add(g);
+    const put = (x, y, z, ry, sc) => { const d = new THREE.Mesh(GEO.plane, m); d.position.set(x, y, z); d.rotation.set(0, ry, rr(-0.6, 0.6)); d.scale.setScalar(sc); d.renderOrder = 8; g.add(d); };
+    for (let i = 0; i < 6; i++) put(-5.84, 0.7 + i * 0.3 + rr(-0.1, 0.1), 7 - i * 1.3, Math.PI / 2, rr(0.14, 0.18));
+    for (let i = 0; i < 5; i++) put(5.84, 0.6 + rr(0, 1.3), 8.5 - i * 1.7, -Math.PI / 2, rr(0.14, 0.18));
+    for (let i = 0; i < 5; i++) put(-11.85 + rr(-0.2, 0.2), 0.3 + i * 0.5, 11.84, Math.PI, 0.15);
+    for (let i = 0; i < 5; i++) put(-6.8 - i * 1.05, 5.0 + rr(0, 0.9), -8.16, Math.PI, rr(0.13, 0.17));
+    for (let i = 0; i < 6; i++) put(-19.84, 4.8 + rr(0, 1.8), -7 + i * 1.6, Math.PI / 2, rr(0.13, 0.17));
+    for (let i = 0; i < 6; i++) put(19.84, -3.6 + rr(0, 2.4), -22.5 + i * 1.8, -Math.PI / 2, rr(0.13, 0.17));
+    for (let i = 0; i < 5; i++) put(6.2 + i * 2.2, 9.3 + rr(0, 1.4), 11.84, Math.PI, rr(0.13, 0.17));
+  },
+  /* X: he's been facing the attic corner for a year */
+  armDanny() {
+    Hunt.start('stalker');
+    Director.force('dannyTurn', { spot: DANNY_CORNER, onDone: (s) => { if (s) this.dannyTalk(); } });
+  },
+  dannyTalk() {
+    const f = this.flags; if (f.dannyFound) return; f.dannyFound = true;
+    Hunt.paused = true; Director.ghosts.shadow.vanish(); G.flickerUntil = G.t + 0.8;
+    setTimeoutGame(0.9, () => Director.force('danny', { pos: V3(12.4, 9, 10.3), faceTo: Op.pos.clone(), hold: 17 }));
+    const lines = [[1.6, 'Don\'t look at my face. I don\'t know what it looks like anymore.'], [5, 'You came. I told you not to come.'], [8.4, 'Rose won\'t let anyone leave. She just wants somebody to play with.'],
+      [12, 'Hide and seek. You seek. Find her three times, and she lets one of us go home.'], [15.6, 'Only one.']];
+    for (const [t, l] of lines) setTimeoutGame(t, () => { AudioSys.play('voice', V3(12.4, 10.6, 10.3), { pitch: 124, fs: 0.95, n: 6 }); HUD.caption(`<b style="color:${C_DANNY}">DANNY</b>: ${l}`, 3.4); });
+    setTimeoutGame(19.5, () => { Hunt.stop(); this.setChapter(12); this.startRound(1); });
+  },
+  /* XI: she counts, you seek. The Kept are awake again. */
+  startRound(r) {
+    this.round = r; const tok = ++this.roundToken; this.cp();
+    HUD.objective(`Find Rose. (${r - 1} / 3) · THE KEPT ARE AWAKE`, true);
+    if (Hunt.kind !== 'kept') Hunt.start('kept', { far: 1 + r, speed: 2.25 }); else Hunt.addKept();
+    Hunt.paused = true; G.flashOutUntil = G.t + 5.2; G.flickerUntil = G.t + 5.2;
+    const nums = ['One...', 'two...', 'three...', 'four...', 'five...', 'six...', 'seven...', 'eight...', 'nine...'];
+    nums.forEach((w, i) => setTimeoutGame(0.3 + i * 0.52, () => { if (tok !== this.roundToken) return; AudioSys.play('voice', null, { pitch: 330, fs: 1.3, n: 2 }); HUD.caption(`<b style="color:${C_ROSE}">ROSE</b> <i>(everywhere)</i>: ${nums.slice(Math.max(0, i - 2), i + 1).join(' ')}`, 0.9); }));
+    setTimeoutGame(5.2, () => {
+      if (tok !== this.roundToken) return;
+      AudioSys.play('giggle', null, { v: 1.2, n: 5 }); HUD.caption(`<b style="color:${C_ROSE}">ROSE</b>: Ten! Ready or not!`, 2.5); Hunt.paused = false;
+      const here = Nav.nearest(Op.pos).room, used = this.usedSpots || (this.usedSpots = []);
+      let cands = ROSE_SPOTS.filter((sp) => sp.room !== here && !used.includes(sp));
+      if (!cands.length) cands = ROSE_SPOTS.filter((sp) => sp.room !== here);
+      const sp = pick(cands); used.push(sp);
+      Director.force('rose', { spot: sp, round: r, onDone: (s) => { if (s && s.data.found && tok === this.roundToken) this.roundDone(r); } });
+    });
+  },
+  roundDone(r) {
+    if (r < 3) { HUD.objective(`Find Rose. (${r} / 3)`, true); setTimeoutGame(2.4, () => this.startRound(r + 1)); return; }
+    // she lets one of you go
+    this.roundToken++; Hunt.stop(); G.flashOutUntil = G.t + 1.4; G.flickerUntil = G.t + 1.6;
+    setTimeoutGame(1.2, () => {
+      this.setChapter(13);
+      const broken = new Set(W.chandeliers.filter((c) => c.broken).map((c) => c.src));
+      for (const src of W.sources) if (!broken.has(src)) src.off = src.off.filter(([, b]) => b <= G.t);
+      W.frontDoor.release(); W.nodeById.f_exit.on = true; HUD.ping(V3(0, 1.5, 12), 3);
+      Director.force('danny', { pos: V3(0, 0, 8.8), faceTo: V3(0, 0, 0), hold: 1e6 });
+      HUD.caption('<i>(far below, the front door creaks open)</i>', 3.5);
+      HUD.objective('The front door is open. Only one of you can leave.');
+    });
+  },
+  /* You stay. He goes. */
+  stay() {
+    const f = this.flags; if (f.stayed) return; f.stayed = true;
+    const c = Director.cur; if (c && c.type === 'danny') c.data.walkOut = true;
+    HUD.objective(''); AudioSys.play('voice', V3(0, 1.7, 8.8), { pitch: 124, fs: 0.95, n: 4 });
+    HUD.caption(`<b style="color:${C_DANNY}">DANNY</b>: ...I'm sorry. I'm so sorry.`, 3.5);
+    setTimeoutGame(4.8, () => { W.frontDoor.shut(); W.nodeById.f_exit.on = false; for (const src of W.sources) if (src.flick !== 'fire') src.off.push([G.t, 1e9]); });
+    setTimeoutGame(6.2, () => {
+      const r = Director.ghosts.rose, b = Director.behindPlayer(0.9) || V3(Op.pos.x + 0.8, Op.pos.y, Op.pos.z);
+      r.place(b, Math.atan2(Op.pos.x - b.x, Op.pos.z - b.z), false); AudioSys.play('giggle', b.clone().setY(b.y + 1), { v: 1.2, n: 5 });
+      HUD.caption(`<b style="color:${C_ROSE}">ROSE</b> <i>(right next to you)</i>: Now you can play with me forever.`, 3.5);
+    });
+    setTimeoutGame(9.4, () => endNight('stayed'));
   },
   knock(n) { const p = V3(13, -2.6, -18); for (let i = 0; i < n; i++) setTimeoutGame(i * 0.6, () => AudioSys.play('knock', p, { v: 1.6 })); },
   /* ── interaction ── */
@@ -3976,12 +4630,14 @@ const Story = {
     const doll = Director.doll;
     if (this.flags.t5 && !G.carry && doll.visible && this.ch >= 5 && this.ch <= 6) consider(doll.group.position.clone().setY(doll.group.position.y + 0.3), 1.9, '[E] TAKE ROSE\'S DOLL', 'doll');
     if (G.carry) consider(CRIB.clone().setY(CRIB.y + 0.8), 2.0, '[E] PUT ROSE TO BED', 'crib', false);
+    if (this.ch === 13 && !this.flags.stayed && Director.cur && Director.cur.type === 'danny' && !Director.cur.data.walkOut) consider(Director.ghosts.watcher.group.position.clone().setY(Op.pos.y + 1.2), 2.8, '[E] STAY — LET DANNY GO', 'stay', false);
     return best;
   },
   interact() {
     const tg = this.target; if (!tg || G.mode !== 'play') return;
     if (tg.obj === 'doll') { this.takeDoll(); return; }
     if (tg.obj === 'crib') { this.homeComing(); return; }
+    if (tg.obj === 'stay') { this.stay(); return; }
     const n = tg.obj; n.pickedAt = G.t; this.docs.add(n.id); Rec.event('doc', { id: n.id });
     this.read(n.id);
   },
@@ -4038,8 +4694,35 @@ const Story = {
     }
     if (this.ch === 7) {
       if (!f.danny && W.frontDoor.target > 0 && p.y < 1 && p.z > -3) { f.danny = true; Director.force('danny', { pos: V3(0, 4.5, -9.4) }); setTimeoutGame(1.2, () => HUD.caption(`<b style="color:${C_DANNY}">DANNY</b> <i>(behind you)</i>: Go. Don't look back.`, 4)); }
-      if (p.z > 12.7) endNight('escaped');
+      if (!f.p2 && W.frontDoor.target > 0 && p.z > 10.6 && p.y < 1) this.partTwo();
     }
+    if (this.ch === 10 && !f.below) {
+      if ((this.knockT -= dt) <= 0) { this.knockT = rr(8, 12); this.knock(3); }
+      if (p.y < -1.4) {
+        f.below = true; G.bulbDead = true;
+        for (const src of W.sources) { const sp = srcPos(src); if (sp.y < -0.5) src.off.push([G.t, 1e9]); }
+        AudioSys.play('whoosh', V3(18, -3.2, -22), { dur: 0.6, v: 1 }); G.flickerUntil = G.t + 0.6;
+        HUD.objective('Danny\'s tape is at the bottom of the stairs.');
+      }
+    }
+    if (this.ch === 13) {
+      const c = Director.cur, w = Director.ghosts.watcher.group.position;
+      if (c && c.type === 'danny' && !f.dannyBye && Op.pos.distanceTo(w) < 4.5) {
+        f.dannyBye = true;
+        [[0, 'She meant it. Only one of us.'], [3.4, 'Go. Mom\'s waiting. Please.'], [7, 'Or... don\'t. I can\'t make you.']].forEach(([t, l]) => setTimeoutGame(t, () => { if (f.stayed) return; AudioSys.play('voice', V3(0, 1.7, 8.8), { pitch: 124, fs: 0.95, n: 5 }); HUD.caption(`<b style="color:${C_DANNY}">DANNY</b>: ${l}`, 3.2); }));
+      }
+      if (f.stayed) { Op.keys = {}; Op.vel.set(0, 0, 0); }
+      else if (p.z > 12.7) endNight('left');
+    }
+  },
+  /* After a rewind, put part two's hunters back the way the chapter left them */
+  rearm(n) {
+    const f = this.flags;
+    if (n === 8 && !f.pr1) { if (f.t6) Hunt.start('kept', { far: 3, speed: 2.0 }); else Hunt.start('kept', { dormant: true, spots: KEPT_VII, speed: 2.0 }); }
+    if (n === 9 && f.t8 && !f.d8) Hunt.start('lady', { pos: LADY_START.pos.clone(), yaw: LADY_START.yaw });
+    if (n === 10 && f.t9 && !f.pr2) Hunt.start('below');
+    if (n === 11 && f.t10 && !f.dannyFound) this.armDanny();
+    if (n === 12) { Director.ghosts.rose.hide(); this.startRound(this.round || 1); }
   },
   /* ── death & rewind ── */
   die() {
@@ -4050,14 +4733,15 @@ const Story = {
   },
   restartChapter() {
     const n = this.ch;
-    Director.clear(); if (Director.boss) Director.endBoss(true);
+    Hunt.stop(); Director.clear(); if (Director.boss) Director.endBoss(true);
     Face.active = 0; G.freezeT = 0; G.flashOutUntil = 0; G.flickerUntil = 0; G._deathCard = false;
     if (n === 6) {
       G.carry = false; const d = Director.doll; d.place(DOLL_ATTIC, V3(13.9, 9, 5)); d.visible = true; d.glow = 0;
       Director.mother.active = false; Director.mother.alpha = 0; Op.place(ATTIC_RESPAWN, Math.PI);
       HUD.objective('Take Rose\'s doll. Put her back in her crib. Keep her in frame.', true);
     } else if (this.checkpoint) Op.place(this.checkpoint.pos, this.checkpoint.yaw);
-    Op.battery = Math.max(Op.battery, 50); Op.dead = false; Op.deadT = 0; Op.trauma = 0; Op.nv = false; AudioSys.setNV(false);
+    if (n >= 8) { this.rearm(n); Hunt.graceUntil = G.t + 2.5; }
+    Op.battery = Math.max(Op.battery, 50); Op.dead = false; Op.deadT = 0; Op.trauma = 0; Op.nv = false; Op.light = true; Op.crouch = false; AudioSys.setNV(false);
     G.glitchKick = 0.8; R.fx.stat = 1; R.fx.black = 0;
     Director.next = G.t + 18; Director.dreadT = 8;
     G.mode = 'play'; Menu.hideAll(); HUD.show(true); AudioSys.resume(); AudioSys.setAmbience(1, 0.2); AudioSys.play('static', null, { dur: 0.6 }); AudioSys.play('beep', null, { f: 1200 });
@@ -4123,11 +4807,11 @@ const Scoring = {
     28 presence distortion · 29 flashlight flicker multiplier
    ════════════════════════════════════════════════════════════════════ */
 const Rec = {
-  HZ: 15, HEAD: 30, frames: null, size: 0, cap: 0, n: 0, acc: 0, events: [], on: false, paused: false,
+  HZ: 15, HEAD: 30, chunks: [], CH: 900, size: 0, cap: 0, n: 0, acc: 0, events: [], on: false, paused: false,
   begin() {
     this.size = this.HEAD + W.entities.reduce((a, e) => a + e.recSize, 0);
-    this.cap = this.HZ * 60 * 40;
-    if (!this.frames || this.frames.length !== this.size * this.cap) this.frames = new Float32Array(this.size * this.cap);
+    // grown a minute at a time, so a long night only costs what it records (up to 90 minutes, then the oldest is taped over)
+    this.CH = this.HZ * 60; this.cap = this.CH * 90; this.chunks = [];
     this.n = 0; this.acc = 1; this.events = []; this.on = true; this.paused = false;
     AudioSys.recordHook = (name, pos, opts) => { if (this.on && !this.paused) this.events.push({ t: G.t, type: 'sfx', name, pos: pos ? [pos.x, pos.y, pos.z] : null, opts }); };
   },
@@ -4135,7 +4819,7 @@ const Rec = {
   event(type, data) { if (this.on && !this.paused) this.events.push(Object.assign({ t: G.t, type }, data)); },
   update(dt) { if (!this.on) return; this.acc += dt; if (this.acc >= 1 / this.HZ) { this.acc %= 1 / this.HZ; this.capture(); if (Net.session.peers.length) Net.broadcast('frame', this.snapshot()); } },
   capture() {
-    const o = (this.n % this.cap) * this.size, a = this.frames, cam = R.camera, gl = G.ghostLight;
+    const slot = this.n % this.cap, ci = Math.floor(slot / this.CH), a = this.chunks[ci] || (this.chunks[ci] = new Float32Array(this.size * this.CH)), o = (slot % this.CH) * this.size, cam = R.camera, gl = G.ghostLight;
     a[o] = G.t; a[o + 1] = cam.position.x; a[o + 2] = cam.position.y; a[o + 3] = cam.position.z;
     a[o + 4] = cam.quaternion.x; a[o + 5] = cam.quaternion.y; a[o + 6] = cam.quaternion.z; a[o + 7] = cam.quaternion.w;
     a[o + 8] = cam.fov; a[o + 9] = Op.nv ? 1 : 0; a[o + 10] = Op.light ? 1 : 0; a[o + 11] = Op.dead ? 1 : 0; a[o + 12] = Op.trauma;
@@ -4146,8 +4830,8 @@ const Rec = {
     this.n++;
   },
   first() { return Math.max(0, this.n - this.cap); },
-  frame(i) { const o = (i % this.cap) * this.size; return this.frames.subarray(o, o + this.size); },
-  timeOf(i) { return this.frames[(i % this.cap) * this.size]; },
+  frame(i) { const slot = i % this.cap, o = (slot % this.CH) * this.size; return this.chunks[Math.floor(slot / this.CH)].subarray(o, o + this.size); },
+  timeOf(i) { const slot = i % this.cap; return this.chunks[Math.floor(slot / this.CH)][(slot % this.CH) * this.size]; },
   /* Returns frames bracketing time t and the blend factor */
   sample(t) {
     let lo = this.first(), hi = this.n - 1;
@@ -4173,7 +4857,7 @@ const Replay = {
     const tMin = Rec.timeOf(Rec.first()) + 0.5, tMax = Rec.timeOf(Rec.n - 1);
     const ms = Scoring.moments.filter((m) => m.peakT > tMin && m.peakT <= tMax + 0.1).sort((a, b) => b.score - a.score), out = [], per = {};
     for (const m of ms) {
-      if (out.length >= 6) break;
+      if (out.length >= 8) break;
       if ((per[m.type] || 0) >= 2 || out.some((o) => Math.abs(o.peakT - m.peakT) < 5)) continue;
       per[m.type] = (per[m.type] || 0) + 1; out.push(m);
     }
@@ -4256,6 +4940,7 @@ const Replay = {
     for (const p of W.portraits) p.update(0, cam);
     for (const p of W.pickups) p.update(t);
     for (const n of W.notes) n.update(t);
+    if (W.p2decals) W.p2decals.visible = t >= G.p2At;
     for (const fn of W.anim) fn(t);
     updateFlames(t, cam); updateLightPool(t, cam.position, 1);
     G.replayT = t;
@@ -4270,7 +4955,7 @@ const Editor = {
     const ed = $('editor'); ed.classList.remove('hidden');
     const bin = $('edBin'); bin.innerHTML = '<b>EXHIBITS</b>';
     clips.forEach((c) => { const f = document.createElement('div'); f.className = 'f'; f.textContent = `EX${c.ex}.VHS — ${c.desc}`; bin.appendChild(f); });
-    ['HOLLOWELL_E_PORTRAIT_1961.TIF', 'DANIEL_R_MISSING_POSTER.BMP', 'AUDIO_SPECTRUM_0333.BMP', 'WITNESS_STATEMENT_SIBLING.TXT', 'PRITCHARD_1979_CASEFILE.TXT'].forEach((n) => { const f = document.createElement('div'); f.className = 'f'; f.style.borderLeftColor = '#3a8ad4'; f.textContent = n; bin.appendChild(f); });
+    ['HOLLOWELL_E_PORTRAIT_1961.TIF', 'PRITCHARD_W_1979_REEL_1-2.8MM', 'GAZETTE_1961_11_04.TIF', 'DANIEL_R_MISSING_POSTER.BMP', 'AUDIO_SPECTRUM_0333.BMP', 'WITNESS_STATEMENT_SIBLING.TXT', 'PRITCHARD_1979_CASEFILE.TXT'].forEach((n) => { const f = document.createElement('div'); f.className = 'f'; f.style.borderLeftColor = '#3a8ad4'; f.textContent = n; bin.appendChild(f); });
     const tracks = $('edTL').querySelectorAll('.track'); tracks.forEach((t) => t.querySelectorAll('.clipblk').forEach((b) => b.remove()));
     const colors = ['#8a8a7a', '#9a6a5a', '#6a8a7a', '#6a7a9a', '#8a6a8a', '#9a8a5a'];
     const W_ = $('edTL').clientWidth - 80, n = clips.length;
@@ -4309,8 +4994,12 @@ const EndScreen = {
     const st = Scoring.stats, ev = Scoring.evidence, best = Replay.clips.slice().sort((a, b) => b.m.score - a.m.score)[0];
     const dur = (() => { const s = Math.floor(G.nightLen); return Math.floor(s / 3600) + ':' + String(Math.floor(s / 60) % 60).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); })();
     const filmedDanny = Scoring.moments.some((m) => m.type === 'danny'), filmedMother = Scoring.moments.some((m) => m.type === 'mother' || m.type === 'boss');
-    $('endNarr').innerHTML = `Tape surrendered to this department by the witness on Nov 3 1998. The witness, sibling of the missing person, states the recording was made alone inside Hollowell Manor on the night of Oct 31, using Daniel R.'s own camcorder.<br><br>Examiners identified <b>${ev}</b> segment${ev === 1 ? '' : 's'} containing visual anomalies not attributable to tape damage${st.deaths ? `, and <b>${st.deaths}</b> point${st.deaths === 1 ? '' : 's'} where the recording is interrupted and resumes from an earlier location on the property` : ''}. The witness has declined to return to the property.`;
-    const rows = [['Length of recording', dur], ['Anomalies on tape', ev], ['Anomalies heard but not filmed', st.missed], ['Documents recovered', `${Story.docs.size} / 11`], ['Signal loss events', st.deaths], ['Battery at end of tape', Math.ceil(Op.battery) + '%'], ['Status', 'DANIEL R. — NOT FOUND']];
+    const stayed = G.endReason === 'stayed', dn = st.deaths ? `, and <b>${st.deaths}</b> point${st.deaths === 1 ? '' : 's'} where the recording is interrupted and resumes from an earlier location on the property` : '';
+    $('endNarr').innerHTML = stayed
+      ? `Tape surrendered by <b>Daniel R., 19</b>, who walked out of the gate of Hollowell Manor at 03:41 AM on Nov 1 1998 — one year and one day after he was reported missing. He states the recording was made by his sibling, who went into the house that night to find him. The sibling has not been seen since. Daniel R. states that they "stayed so I could go."<br><br>Examiners identified <b>${ev}</b> segment${ev === 1 ? '' : 's'} containing visual anomalies not attributable to tape damage${dn}. Daniel R. has asked to be allowed back into the house.`
+      : `Tape surrendered to this department by the witness on Nov 3 1998. The witness, sibling of the missing person, states the recording was made alone inside Hollowell Manor on the night of Oct 31, using Daniel R.'s own camcorder.<br><br>Examiners identified <b>${ev}</b> segment${ev === 1 ? '' : 's'} containing visual anomalies not attributable to tape damage${dn}. The witness has declined to return to the property.`;
+    $('endscreen').querySelector('.stamp').textContent = stayed ? 'REOPENED' : 'SEALED';
+    const rows = [['Length of recording', dur], ['Anomalies on tape', ev], ['Anomalies heard but not filmed', st.missed], ['Documents recovered', `${Story.docs.size} / 19`], ['Signal loss events', st.deaths], ['Battery at end of tape', Math.ceil(Op.battery) + '%'], ['Status', stayed ? 'DANIEL R. — FOUND ALIVE<br>WITNESS — MISSING' : 'DANIEL R. — NOT FOUND']];
     $('endStats').innerHTML = rows.map(([a, b]) => `<tr><td>${a}</td><td>${b}</td></tr>`).join('');
     const notes = [];
     if (ev <= 2) notes.push('Footage inconclusive. Low light, heavy tape damage, a frightened witness. Recommend the case remain closed.');
@@ -4318,8 +5007,10 @@ const EndScreen = {
     else if (ev <= 11) notes.push('I have watched this tape eleven times. I do not want to watch it again. The woman in the later frames matches the 1961 portrait of Eleanor Hollowell. Recommend the house be demolished.');
     else notes.push('Too many anomalies, too clear, to be a hoax. Every examiner who has reviewed this tape has asked to be reassigned. At 03:33 the audio carries a child\'s voice saying "thank you." I heard it too.');
     if (filmedMother) notes.push('She looks directly into the lens. Every time.');
-    if (filmedDanny) notes.push('The young man on the balcony at the end of the tape. His mother has identified him.');
-    else notes.push('Something stands on the balcony in the last minute of the tape. The witness never turns around to look at it.');
+    if (Scoring.moments.some((m) => m.type === 'kept')) notes.push('From 03:33 onward the camcorder clock stops. Grey figures in the foyer are in a different place, and a different posture, in every frame where the light leaves them.');
+    if (stayed) notes.push('Daniel R. will not be separated from this tape. He says someone on it is still talking to him.');
+    else if (filmedDanny) notes.push('The young man who holds the front door open in the last minute of the tape has been identified by his mother. It is her son.');
+    else notes.push('Someone holds the front door open in the last minute of the tape. The witness never looks back at him.');
     $('endNotes').innerHTML = notes.map((n) => `<div>${escapeHTML(n)}</div>`).join('');
     this.thumb(best);
     $('endscreen').classList.remove('hidden'); $('endscreen').scrollTop = 0;
@@ -4356,7 +5047,7 @@ const HUD = {
   reset() { this.pings = []; this.emfV = 0; this.hintT = 0; this.objText = null; this.objAlert = false; this.capUntil = -1; this.chapUntil = -1; $('popups').innerHTML = ''; $('hint').classList.remove('show'); this.lastTxt = {}; },
   pop(text, cls = '') {
     const d = document.createElement('div'); d.className = 'pop ' + cls; d.textContent = text;
-    this.popRow = ((this.popRow || 0) + 1) % 3; d.style.top = `calc(5vh + ${150 + this.popRow * 26}px)`;
+    this.popRow = ((this.popRow || 0) + 1) % 3; d.style.top = `calc(5vh + ${205 + this.popRow * 24}px)`;
     $('popups').appendChild(d); setTimeout(() => d.remove(), 2300);
   },
   ping(pos, dur = 1.5) { this.pings.push({ pos: pos.clone(), until: G.t + dur }); },
@@ -4376,7 +5067,8 @@ const HUD = {
     this.set('tc', timecode(G.t));
     const mins = 23 * 60 + 58 + G.t * 0.15, hh = Math.floor(mins / 60) % 24, mm = Math.floor(mins % 60);
     const ampm = hh >= 12 ? 'PM' : 'AM', h12 = ((hh + 11) % 12) + 1;
-    const dstr = `${ampm} ${h12}:${String(mm).padStart(2, '0')}<br>OCT 31 1998`; // the camcorder clock was never set properly
+    // the camcorder clock was never set properly; after the door shuts it stops at 3:33, on the night Danny went in
+    const dstr = G.t >= G.p2At ? 'AM 3:33<br>OCT 31 1997' : `${ampm} ${h12}:${String(mm).padStart(2, '0')}<br>OCT 31 1998`;
     if (this.lastTxt.date !== dstr) { this.lastTxt.date = dstr; $('date').innerHTML = dstr; }
     // battery
     const b = Op.battery, bars = $('batt').querySelectorAll('.bar');
@@ -4387,6 +5079,9 @@ const HUD = {
     this.set('mNV', Op.nv ? 'NIGHT ◉ ON' : 'NIGHT OFF'); $('mNV').classList.toggle('on', Op.nv);
     this.set('evid', 'EVIDENCE ' + String(Scoring.evidence).padStart(2, '0'));
     this.set('carry', G.carry ? '✦ ROSE\'S DOLL' : '');
+    // the audio level meter: something upstairs is listening
+    const listen = Hunt.kind === 'lady', am = $('mAudio'); am.classList.toggle('hidden', !listen && Story.ch !== 9);
+    if (listen || Story.ch === 9) { const lv = Math.round(clamp(Hunt.kind === 'lady' ? Hunt.noise : Hunt.playerNoise(), 0, 1) * 5), cls = lv >= 3 ? 'hi' : lv >= 2 ? 'mid' : 'lo', html = `AUDIO <span class="${cls}">${'▮'.repeat(lv)}${'▯'.repeat(5 - lv)}</span>`; if (this.lastTxt.aud !== html) { this.lastTxt.aud = html; am.innerHTML = html; } }
     // zoom
     $('zoombar').classList.toggle('show', Op.zoomShowT > 0 || Op.fov < 65);
     $('zoombar').querySelector('.knob').style.left = ((75 - Op.fov) / 55 * 124) + 'px';
@@ -4394,7 +5089,7 @@ const HUD = {
     $('focus').classList.toggle('locked', !!Scoring.lastGhost);
     // EMF
     this.emfV = Math.max(0, this.emfV - dt * 0.25);
-    const e = Math.round(this.emfV * 5 + (Director.cur && Director.cur.phase === 'active' ? 1 : 0) + (G.boss ? 2 : 0) + (vnoise(G.t * 3) > 0.7 ? 1 : 0));
+    const e = Math.round(this.emfV * 5 + (Director.cur && Director.cur.phase === 'active' ? 1 : 0) + (G.boss || Hunt.s ? 2 : 0) + (vnoise(G.t * 3) > 0.7 ? 1 : 0));
     const ec = clamp(e, 0, 5); if (this.lastTxt.emfN !== ec) { this.lastTxt.emfN = ec; $('emf').innerHTML = `EMF <span class="bars">${'▮'.repeat(ec)}${'▯'.repeat(5 - ec)}</span>`; $('emf').classList.toggle('hot', ec >= 3); }
     // objective
     this.set('objective', this.objText || '');
@@ -4441,14 +5136,15 @@ const Menu = {
 const G = {
   mode: 'loading', t: 0, rt: 0, playing: false, boss: false, lightDim: 1, flickerUntil: 0,
   glitchKick: 0, glitchNear: 0, ghostLight: null, flashFx: 0, seed: 0, fresh: false, endReason: '', stopT: 0, nightLen: 0,
-  flashOutUntil: 0, flashMul: 1, presence: 0, presenceKick: 0, freezeT: 0, carry: false, bulbDead: false, dieT: 0
+  flashOutUntil: 0, flashMul: 1, presence: 0, presenceKick: 0, freezeT: 0, carry: false, bulbDead: false, dieT: 0, p2At: Infinity
 };
 let Face = null;
 function prepareNight(seed) {
   G.seed = seed; G.t = 0; G.boss = false; G.lightDim = 1; G.flickerUntil = 0; G.glitchKick = 0; G.glitchNear = 0; G.ghostLight = null; G.playing = false;
-  G.flashOutUntil = 0; G.flashMul = 1; G.presence = 0; G.presenceKick = 0; G.freezeT = 0; G.carry = false; G.bulbDead = false;
+  G.flashOutUntil = 0; G.flashMul = 1; G.presence = 0; G.presenceKick = 0; G.freezeT = 0; G.carry = false; G.bulbDead = false; G.p2At = Infinity;
+  Hunt.kind = null; Hunt.s = null; Hunt.kept = []; Hunt.paused = false; Hunt.graceUntil = 0;
   buildWorld(seed);
-  Director.ghosts = { sheet: new PaleWoman(), wisp: new WispGhost(), shadow: new ShadowFigure(), hands: new WindowHands(), watcher: new Watcher(), winFig: new WindowFigure(), crawler: new Crawler(), peeker: new Peeker() };
+  Director.ghosts = { sheet: new PaleWoman(), wisp: new WispGhost(), shadow: new ShadowFigure(), hands: new WindowHands(), watcher: new Watcher(), winFig: new WindowFigure(), crawler: new Crawler(), peeker: new Peeker(), kept: [0, 1, 2, 3, 4].map((i) => new Kept(i)), rose: new RoseGhost() };
   Director.doll = new Doll(); Director.mother = new Mother(); Face = new FaceJump();
   Story.build();
   Op.reset(); Weather.next = 8; Weather.seq = []; Weather.thunder = []; _timers.length = 0; _poolT = 0;
@@ -4470,10 +5166,11 @@ function endNight(reason) {
   G.playing = false; G.endReason = reason; G.nightLen = G.t;
   if (Director.cur) { Director.finish(Director.cur); Director.cur = null; }
   if (Director.boss) Director.endBoss(false);
+  Hunt.stop();
   Rec.capture(); Rec.stop();
   if (document.pointerLockElement) document.exitPointerLock();
   HUD.show(false); AudioSys.play('beep', null, { f: 900, double: true }); AudioSys.setAmbience(0.3, 0);
-  Story.cards(STORY_TEXT.epilogue, () => { G.mode = 'stopping'; G.stopT = 0; }, 'CLICK TO REVIEW THE TAPE', 2.2);
+  Story.cards(reason === 'stayed' ? STORY_TEXT.epilogueStayed : STORY_TEXT.epilogueLeft, () => { G.mode = 'stopping'; G.stopT = 0; }, 'CLICK TO REVIEW THE TAPE', 2.2);
 }
 function pause() {
   if (G.mode !== 'play') return;
@@ -4561,12 +5258,14 @@ function updatePlay(dt) {
   if (!G.boss) G.lightDim = damp(G.lightDim, Story.lightTarget(), 0.6, dt); // the house gets darker the deeper you go
   Op.update(dt, G.t);
   const cam = R.camera; cam.updateMatrixWorld();
-  Director.update(dt);
+  Director.update(dt); Hunt.update(dt);
   const gh = Director.ghosts;
-  gh.sheet.update(dt, G.t, cam); gh.wisp.update(dt, G.t, Op.nv); gh.shadow.update(dt, G.t); gh.hands.update(dt, G.t); gh.watcher.update(dt, G.t); gh.winFig.update(G.t); gh.crawler.update(dt, G.t); gh.peeker.update(dt);
+  gh.sheet.update(dt, G.t, cam); gh.wisp.update(dt, G.t, Op.nv); gh.shadow.update(dt, G.t); gh.hands.update(dt, G.t); gh.watcher.update(dt, G.t); gh.winFig.update(G.t); gh.crawler.update(dt, G.t, Op.nv); gh.peeker.update(dt); gh.rose.update(dt, G.t); for (const k of gh.kept) k.update(dt, G.t);
+  if (W.p2decals) W.p2decals.visible = G.t >= G.p2At;
   Director.doll.update(dt, G.t, cam, !G.carry); Director.mother.update(dt, G.t); Face.update(dt, cam);
   const agents = [Op.pos];
   if (Director.mother.active) agents.push(Director.mother.group.position);
+  if (Hunt.kind === 'lady') agents.push(Director.ghosts.sheet.group.position);
   for (const d of W.doors) d.update(dt, agents);
   W.frontDoor.update(dt);
   for (const c of W.chandeliers) c.update(dt);
@@ -4590,7 +5289,7 @@ function updatePlay(dt) {
   for (const f of Director.foci()) { const d = f.obj.getWorldPosition(_v1).distanceTo(Op.pos); fear = Math.max(fear, clamp(1 - d / 14, 0, 1) * (f.nvOnly && !Op.nv ? 0.5 : 1)); }
   if (Director.cur && Director.cur.phase === 'cue') fear = Math.max(fear, 0.35);
   if (Op.dead) fear = Math.max(fear, 0.5);
-  if (G.boss) fear = Math.max(fear, 0.6);
+  if (G.boss || Hunt.s) fear = Math.max(fear, 0.6);
   AudioSys.updateHeart(dt, fear);
   if (G.freezeT <= 0) { HUD.update(dt); updateCaption(G.t); }
   Story.update(dt);
@@ -4598,7 +5297,7 @@ function updatePlay(dt) {
 function postFx(dt) {
   const cam = R.camera;
   G.glitchKick = Math.max(0, G.glitchKick - dt * 1.4);
-  R.fx.glitch = clamp(0.04 + G.glitchNear + G.glitchKick * 0.8 + Op.trauma * 0.35 + (Op.battery < 10 ? 0.15 : 0), 0, 1.5);
+  R.fx.glitch = clamp(0.04 + (G.t >= G.p2At ? 0.05 : 0) + G.glitchNear + G.glitchKick * 0.8 + Op.trauma * 0.35 + (Op.battery < 10 ? 0.15 : 0), 0, 1.5);
   G.glitchNear = Math.max(0, G.glitchNear - dt * 2);
   R.fx.nv = Op.nv ? 1 : 0; R.fx.black = damp(R.fx.black, Op.dead ? 1 : 0, Op.dead ? 5 : 8, dt);
   R.fx.stat = Math.max(0, R.fx.stat - dt * 2.5, G.glitchKick * 0.3, Face.active ? 0.25 : 0);
@@ -4677,7 +5376,7 @@ function boot() {
 }
 boot();
 /* Console handle for tinkering and automated tests: window.HauntedCamcorder */
-window.HauntedCamcorder = { G, Op, Director, Scoring, Story, Replay, Rec, Settings, R, startNight, endNight, prepareNight, world: () => W, step: (dt) => updatePlay(dt), fire: (ev, data) => bus.emit(ev, data) };
+window.HauntedCamcorder = { G, Op, Director, Scoring, Story, Hunt, Replay, Rec, Settings, R, startNight, endNight, prepareNight, world: () => W, step: (dt) => updatePlay(dt), fire: (ev, data) => bus.emit(ev, data) };
 };
 </script>
 </body>
