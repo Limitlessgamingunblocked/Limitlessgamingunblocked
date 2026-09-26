@@ -93,23 +93,25 @@
   #deadmsg { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-size: .7em; color: rgba(255,60,60,.5); letter-spacing: 6px; }
 
   /* sound direction indicators */
-  .edge { position: absolute; top: 50%; transform: translateY(-50%); font-size: 30px; color: #fff; opacity: 0; transition: opacity .25s; text-shadow: 0 0 10px #f33, 0 0 20px #f33; }
-  #edgeL { left: 1.4vw; } #edgeR { right: 1.4vw; }
-  #edgeU { top: 1.2vh; left: 50%; transform: translateX(-50%); } #edgeD { top: auto; bottom: 1.2vh; left: 50%; transform: translateX(-50%); }
+  .edge { position: absolute; opacity: 0; transition: opacity .6s; pointer-events: none; font-size: 0; }
+  #edgeL { left: 0; top: 20vh; width: 5vw; height: 60vh; background: linear-gradient(to right, rgba(150,20,20,.45), transparent); }
+  #edgeR { right: 0; top: 20vh; width: 5vw; height: 60vh; background: linear-gradient(to left, rgba(150,20,20,.45), transparent); }
+  #edgeU { top: 0; left: 20vw; width: 60vw; height: 5vh; background: linear-gradient(to bottom, rgba(150,20,20,.45), transparent); }
+  #edgeD { bottom: 0; left: 20vw; width: 60vw; height: 6vh; background: linear-gradient(to top, rgba(150,20,20,.5), transparent); }
 
   /* crew status */
-  #crew { position: absolute; left: calc(5vw + 22px); bottom: calc(5vh + 64px); font-size: .55em; line-height: 1.55; }
+  #crew { display: none; }
   #crew .row span.st { opacity: .85; }
 
   /* ── Stream overlay (views, subs, chat) ─────────────────── */
   #stream { position: fixed; right: 0; top: 18vh; width: min(28vw, 330px); pointer-events: none; font-family: Arial, Helvetica, sans-serif; }
-  #counter { background: rgba(0,0,0,.55); border-left: 4px solid var(--yt-red); padding: 8px 12px; margin-bottom: 8px; }
-  #counter .views { font-size: clamp(16px, 1.9vw, 24px); font-weight: 900; color: #fff; }
+  #counter { background: rgba(0,0,0,.35); border-left: 3px solid rgba(255,0,51,.6); padding: 6px 10px; margin-bottom: 8px; opacity: .8; }
+  #counter .views { font-size: clamp(13px, 1.4vw, 18px); font-weight: 700; color: #ddd; }
   #counter .views .eye { color: var(--yt-red); }
   #counter .subs { font-size: 12px; color: #ddd; margin-top: 2px; }
   #counter .rate { font-size: 11px; color: #8f8; min-height: 14px; }
   #chat { display: flex; flex-direction: column; gap: 4px; max-height: 44vh; overflow: hidden; justify-content: flex-end; mask-image: linear-gradient(to bottom, transparent, #000 25%); -webkit-mask-image: linear-gradient(to bottom, transparent, #000 25%); }
-  .cmt { background: rgba(0,0,0,.5); padding: 4px 8px; font-size: 12.5px; color: #eee; border-radius: 3px; animation: cmtIn .25s ease-out; line-height: 1.3; }
+  .cmt { background: rgba(0,0,0,.4); padding: 3px 7px; font-size: 12px; color: #cfcfc8; border-radius: 2px; animation: cmtIn .25s ease-out; line-height: 1.3; opacity: .85; }
   .cmt b { margin-right: 5px; }
   .cmt.super { background: rgba(255,196,0,.88); color: #111; font-weight: bold; }
   .cmt.super b { color: #111 !important; }
@@ -117,11 +119,12 @@
 
   /* floating popups */
   #popups { font-family: Impact, "Arial Black", sans-serif; }
-  .pop { position: absolute; left: 50%; font-size: 30px; color: #fff; white-space: nowrap; letter-spacing: 1px;
-    -webkit-text-stroke: 1.5px #000; text-shadow: 3px 3px 0 #000; animation: popUp 1.6s ease-out forwards; }
-  .pop.big { font-size: 52px; color: #ffe030; }
-  .pop.bad { color: #ff4040; font-size: 44px; }
-  .pop.combo { color: #ff4fd8; font-size: 58px; }
+  .pop { position: absolute; left: calc(5vw + 22px); right: auto; font-family: "Courier New", monospace; font-weight: bold; font-size: 15px; color: rgba(235,235,225,.85); white-space: nowrap; letter-spacing: 2px;
+    text-shadow: 1px 1px 0 #000; animation: popFade 2.2s ease-out forwards; }
+  .pop.big { font-size: 17px; color: #e8e2b0; }
+  .pop.bad { color: #d84a4a; font-size: 18px; }
+  .pop.combo { color: #e8b0b0; font-size: 18px; }
+  @keyframes popFade { 0% { opacity: 0; transform: translateY(6px); } 12% { opacity: 1; transform: none; } 75% { opacity: 1; } 100% { opacity: 0; transform: translateY(-14px); } }
   @keyframes popUp {
     0% { transform: translate(-50%, 20px) scale(.5); opacity: 0; }
     15% { transform: translate(-50%, 0) scale(1.15); opacity: 1; }
@@ -130,13 +133,11 @@
   }
 
   /* speech bubbles */
-  .bubble { position: absolute; transform: translate(-50%, -100%); background: #fff; color: #111; font-family: "Comic Sans MS", "Chalkboard SE", "Comic Neue", sans-serif;
-    font-size: 15px; font-weight: bold; padding: 6px 11px; border-radius: 14px; border: 2px solid #111; max-width: 260px; text-align: center; white-space: normal;
-    box-shadow: 3px 3px 0 rgba(0,0,0,.6); }
-  .bubble::after { content: ""; position: absolute; left: 50%; bottom: -10px; transform: translateX(-50%); border: 8px solid transparent; border-top-color: #111; }
-  .bubble .who { display: block; font-size: 10px; letter-spacing: 1px; opacity: .7; }
-  .bubble.yell { background: #ffec6e; font-size: 18px; }
-  #subtitle { position: absolute; left: 50%; bottom: 13vh; transform: translateX(-50%); font-family: Arial, sans-serif; font-size: 17px; background: rgba(0,0,0,.65); padding: 5px 12px; color: #ffe46e; text-align: center; max-width: 70vw; pointer-events: none; }
+  .bubble { position: absolute; transform: translate(-50%, -100%); background: rgba(0,0,0,.55); color: #e6e4dc; font-family: Arial, Helvetica, sans-serif;
+    font-size: 14px; padding: 4px 9px; border-radius: 2px; max-width: 260px; text-align: center; white-space: normal; }
+  .bubble .who { display: block; font-size: 10px; letter-spacing: 2px; opacity: .8; }
+  .bubble.yell { color: #ffd4d4; font-weight: bold; text-transform: uppercase; }
+  #subtitle { position: absolute; left: 50%; bottom: 13vh; transform: translateX(-50%); font-family: Arial, sans-serif; font-size: 16px; background: rgba(0,0,0,.6); padding: 5px 12px; color: #e8e4d0; text-align: center; max-width: 70vw; pointer-events: none; }
 
   /* ── Menus ─────────────────────────────────────────────── */
   .menu { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: auto; }
@@ -297,6 +298,7 @@
   <div class="osd bl">TRACKING ▮▮▮▮▯▯ · SP · HI-FI STEREO</div>
   <h1>HAUNTED<br>CAMCORDER</h1>
   <div class="tag">A BOO CREW PRODUCTION · HOLLOWELL MANOR · OCT 31 1998</div>
+  <div class="tag" style="margin-top:6px;color:#ff8a8a;opacity:.85">HEADPHONES RECOMMENDED · PLAY WITH THE LIGHTS OFF</div>
   <div class="tape"><div class="label">BOO CREW ep.47 — <s>DO NOT TAPE OVER</s> HOLLOWELL MANOR!!! (REAL)</div></div>
   <div class="vmenu">
     <button class="vbtn" id="pressplay">PRESS PLAY</button>
@@ -334,9 +336,10 @@
     <ul>
       <li>Your friends <b style="color:#ff9a4a">CHAD</b>, <b style="color:#b09bff">PRIYA</b> and <b style="color:#6fe0a0">GARY</b> are exploring Hollowell Manor.</li>
       <li>Film the scary stuff. <b>Ghosts on screen = VIEWS.</b> Friends screaming on screen = MULTIPLIER. Both in one shot = <b>COMBO!</b></li>
-      <li>Listen! Sounds flash arrows at the screen edge. Turn and point the camera.</li>
-      <li>Some ghosts only show up in <b>NIGHT VISION</b>. It eats battery. Grab spare batteries.</li>
-      <li>Survive until dawn… or until Mother lets you leave. Then watch your highlight reel.</li>
+      <li>Listen. When the house goes quiet, something is about to happen. Turn and point the camera.</li>
+      <li>Some things only show up in <b>NIGHT VISION</b>. It eats battery. Don't let the battery die.</li>
+      <li>If you hear footsteps behind you that stop when you stop… you know what to do.</li>
+      <li>Survive until the tape runs out… or until Mother lets you leave. Then watch your highlight reel.</li>
     </ul>
     <div class="keys">
       <kbd>WASD</kbd><span>Move · <kbd>SHIFT</kbd> sprint · <kbd>C</kbd> crouch</span>
@@ -593,23 +596,35 @@ const AudioSys = {
     const fn = SFX[name]; if (!fn) return;
     try { fn(this, this.ctx.currentTime + 0.01, pos ? { x: pos.x, y: pos.y, z: pos.z } : null, opts); } catch (e) { /* never let audio kill the game */ }
   },
-  /* Continuous ambience: drone, wind, rain, lens whirr, night-vision whine */
+  /* Continuous ambience: sub drone, wind, rain, a dissonant tension bed, lens whirr, night-vision whine.
+     Everything ambient runs through `duck`, which hush() pulls to near-silence right before a scare. */
   startAmbience() {
     const ctx = this.ctx, t = ctx.currentTime;
-    const droneG = ctx.createGain(); droneG.gain.value = 0.05; droneG.connect(this.amb);
-    const dl = this.filt('lowpass', 180, 0.7, droneG);
-    [55, 55.7, 82.4, 110.3].forEach((f, i) => { const o = ctx.createOscillator(); o.type = i < 2 ? 'sawtooth' : 'sine'; o.frequency.value = f; o.connect(dl); o.start(t); });
-    const lfo = ctx.createOscillator(); lfo.frequency.value = 0.07; const lg = ctx.createGain(); lg.gain.value = 70; lfo.connect(lg); lg.connect(dl.frequency); lfo.start(t);
+    this.duck = ctx.createGain(); this.duck.gain.value = 1; this.duck.connect(this.master);
+    this.amb.disconnect(); this.amb.connect(this.duck);
+    const droneG = ctx.createGain(); droneG.gain.value = 0.06; droneG.connect(this.amb);
+    const dl = this.filt('lowpass', 140, 0.8, droneG);
+    [41.2, 41.7, 61.7, 82.1].forEach((f, i) => { const o = ctx.createOscillator(); o.type = i < 2 ? 'sawtooth' : 'sine'; o.frequency.value = f; o.connect(dl); o.start(t); });
+    const sub = ctx.createOscillator(); sub.frequency.value = 29; const sg = ctx.createGain(); sg.gain.value = 0.5; sub.connect(sg); sg.connect(droneG); sub.start(t);
+    const lfo = ctx.createOscillator(); lfo.frequency.value = 0.05; const lg = ctx.createGain(); lg.gain.value = 60; lfo.connect(lg); lg.connect(dl.frequency); lfo.start(t);
     // wind
-    const windG = ctx.createGain(); windG.gain.value = 0.08; windG.connect(this.amb);
-    const wf = this.filt('bandpass', 400, 1.2, windG);
+    const windG = ctx.createGain(); windG.gain.value = 0.05; windG.connect(this.amb);
+    const wf = this.filt('bandpass', 350, 1.4, windG);
     const ws = ctx.createBufferSource(); ws.buffer = this.noiseBuf; ws.loop = true; ws.playbackRate.value = 0.5; ws.connect(wf); ws.start(t);
-    const wl = ctx.createOscillator(); wl.frequency.value = 0.11; const wlg = ctx.createGain(); wlg.gain.value = 260; wl.connect(wlg); wlg.connect(wf.frequency); wl.start(t);
-    const wl2 = ctx.createOscillator(); wl2.frequency.value = 0.043; const wlg2 = ctx.createGain(); wlg2.gain.value = 0.05; wl2.connect(wlg2); wlg2.connect(windG.gain); wl2.start(t);
+    const wl = ctx.createOscillator(); wl.frequency.value = 0.09; const wlg = ctx.createGain(); wlg.gain.value = 220; wl.connect(wlg); wlg.connect(wf.frequency); wl.start(t);
+    const wl2 = ctx.createOscillator(); wl2.frequency.value = 0.037; const wlg2 = ctx.createGain(); wlg2.gain.value = 0.04; wl2.connect(wlg2); wlg2.connect(windG.gain); wl2.start(t);
     // rain
-    const rainG = ctx.createGain(); rainG.gain.value = 0.035; rainG.connect(this.amb);
-    const rf = this.filt('highpass', 2200, 0.5, rainG);
+    const rainG = ctx.createGain(); rainG.gain.value = 0.02; rainG.connect(this.amb);
+    const rf = this.filt('highpass', 2400, 0.5, rainG);
     const rs = ctx.createBufferSource(); rs.buffer = this.noiseBuf; rs.loop = true; rs.connect(rf); rs.start(t);
+    // tension bed: a slowly beating cluster of minor seconds, plus a thin high whine at peak dread
+    this.tensionG = ctx.createGain(); this.tensionG.gain.value = 0; this.tensionG.connect(this.duck);
+    const tv = ctx.createGain(); tv.gain.value = 0.65; tv.connect(this.tensionG);
+    this.tensionF = this.filt('lowpass', 300, 1.2, tv);
+    [110, 116.5, 164.8, 174.6, 233.1].forEach((f) => { const o = ctx.createOscillator(); o.type = 'sawtooth'; o.frequency.value = f * (1 + (Math.random() - 0.5) * 0.004); o.connect(this.tensionF); o.start(t); });
+    const tl = ctx.createOscillator(); tl.frequency.value = 0.23; const tlg = ctx.createGain(); tlg.gain.value = 0.35; tl.connect(tlg); tlg.connect(tv.gain); tl.start(t);
+    this.whineG = ctx.createGain(); this.whineG.gain.value = 0; this.whineG.connect(this.duck);
+    [1760, 1771].forEach((f) => { const o = ctx.createOscillator(); o.frequency.value = f; o.connect(this.whineG); o.start(t); });
     // lens whirr
     this.whirrGain = ctx.createGain(); this.whirrGain.gain.value = 0; this.whirrGain.connect(this.sfx);
     const wh = this.filt('bandpass', 900, 3, this.whirrGain);
@@ -624,7 +639,22 @@ const AudioSys = {
     if (!this.ready) return;
     const t = this.ctx.currentTime;
     this.amb.gain.setTargetAtTime(level, t, 0.6);
-    this.droneG.gain.setTargetAtTime(0.05 + dark * 0.07, t, 1.5);
+    this.droneG.gain.setTargetAtTime(0.06 + dark * 0.08, t, 1.5);
+    if (level < 0.5) this.setTension(0);
+  },
+  /* 0..1 dread level from the Director */
+  setTension(v) {
+    if (!this.ready) return;
+    const t = this.ctx.currentTime;
+    this.tensionG.gain.setTargetAtTime(v * v * 0.07, t, 0.8);
+    this.tensionF.frequency.setTargetAtTime(220 + v * 900, t, 0.8);
+    this.whineG.gain.setTargetAtTime(Math.max(0, v - 0.65) * 0.012, t, 0.6);
+  },
+  /* The world goes quiet… (then something happens) */
+  hush(dur = 1.5) {
+    if (!this.ready) return;
+    const t = this.ctx.currentTime, g = this.duck.gain;
+    g.cancelScheduledValues(t); g.setValueAtTime(g.value, t); g.linearRampToValueAtTime(0.04, t + 0.35); g.setValueAtTime(0.04, t + dur); g.linearRampToValueAtTime(1, t + dur + 2.5);
   },
   setWhirr(v) { if (this.ready) this.whirrGain.gain.setTargetAtTime(clamp(v, 0, 0.08), this.ctx.currentTime, 0.03); },
   setNV(on) { if (this.ready) this.nvGain.gain.setTargetAtTime(on ? 0.006 : 0, this.ctx.currentTime, 0.1); },
@@ -682,18 +712,65 @@ const SFX = {
   scream(A, t, p, o) {
     const dur = o.dur || 1.4, pitch = o.pitch || 300, vol = o.v || 0.8, vw = VOWELS[o.vowel || 'a'];
     const g = A.out(p, vol, 0.45, 3.5);
-    const sh = A.shaper(o.dist || 3, g); const sum = A.ctx.createGain(); sum.gain.value = 1; sum.connect(sh);
+    const sh = A.shaper(o.dist || 6, g); const sum = A.ctx.createGain(); sum.gain.value = 1; sum.connect(sh);
     const fs = vw.map((f, i) => { const b = A.filt('bandpass', f * (o.fshift || 1), 7 + i * 2, sum); return b; });
     const src = A.ctx.createGain(); fs.forEach((b) => src.connect(b));
     const osc = A.osc('sawtooth', pitch, t, dur, src);
     osc.frequency.setValueAtTime(pitch * 0.8, t); osc.frequency.exponentialRampToValueAtTime(pitch * (o.rise || 1.7), t + 0.18);
     osc.frequency.setTargetAtTime(pitch * (o.fall || 1.3), t + dur * 0.6, dur * 0.3);
     const vib = A.ctx.createOscillator(); vib.frequency.value = rr(6, 9); const vg = A.ctx.createGain(); vg.gain.value = pitch * 0.06; vib.connect(vg); vg.connect(osc.frequency); vib.start(t); vib.stop(t + dur + 0.1);
-    const ng = A.ctx.createGain(); ng.gain.value = 0.25; ng.connect(src); A.noise(t, dur, ng);
+    const ng = A.ctx.createGain(); ng.gain.value = 0.55; ng.connect(src); A.noise(t, dur, ng);
+    const jit = A.ctx.createOscillator(); jit.type = 'square'; jit.frequency.value = rr(11, 17); const jg = A.ctx.createGain(); jg.gain.value = pitch * 0.03; jit.connect(jg); jg.connect(osc.frequency); jit.start(t); jit.stop(t + dur + 0.1);
     A.env(g, t, 0.04, 1, dur * 0.6, dur * 0.4);
   },
   faint(A, t, p) { const g = A.out(p, 0.5, 0.3); const o = A.osc('sine', 500, t, 0.8, g); o.frequency.exponentialRampToValueAtTime(90, t + 0.8); A.env(g, t, 0.02, 0.6, 0.5, 0.3); SFX.slam(A, t + 0.85, p, { v: 0.35 }); },
-  /* Gibberish voices (each explorer has a pitch) */
+  /* Hushed, breathy voices (each explorer has a pitch). Yells are voiced and louder. */
+  voice(A, t, p, o) {
+    const n = o.n || 6, yell = !!o.yell, pitch = o.pitch || 150, vs = Object.keys(VOWELS);
+    let tt = t;
+    for (let i = 0; i < n; i++) {
+      const d = rr(0.08, 0.16), g = A.out(p, yell ? 0.34 : 0.15, 0.35, 2.2), sum = A.ctx.createGain(); sum.connect(g);
+      const vw = VOWELS[pick(vs)], src = A.ctx.createGain();
+      vw.slice(0, 2).forEach((f) => src.connect(A.filt('bandpass', f * (o.fs || 1), 6, sum)));
+      A.noise(tt, d + 0.05, src, 1.1);
+      const og = A.ctx.createGain(); og.gain.value = yell ? 0.7 : 0.1; og.connect(src);
+      const os = A.osc('sawtooth', pitch * rr(0.9, yell ? 1.5 : 1.1), tt, d, og); os.frequency.linearRampToValueAtTime(pitch * rr(0.8, 1.05), tt + d);
+      A.env(g, tt, 0.02, 1, d * 0.5, d * 0.5);
+      tt += d + rr(0.02, 0.07) + (Math.random() < 0.2 ? 0.15 : 0);
+    }
+  },
+  breath(A, t, p, o) {
+    for (let i = 0; i < (o.n || 2); i++) {
+      const t0 = t + i * 1.7, v = o.v || 1;
+      const g = A.out(p, 0.4 * v, 0.25, 1.2), bp = A.filt('bandpass', 800, 0.8, g); A.noise(t0, 0.95, bp, 0.9);
+      bp.frequency.setValueAtTime(650, t0); bp.frequency.linearRampToValueAtTime(1300, t0 + 0.85); A.env(g, t0, 0.55, 1, 0.1, 0.3);
+      const g2 = A.out(p, 0.34 * v, 0.25, 1.2), bp2 = A.filt('bandpass', 700, 0.9, g2); A.noise(t0 + 0.95, 0.8, bp2, 0.7);
+      bp2.frequency.setValueAtTime(900, t0 + 0.95); bp2.frequency.linearRampToValueAtTime(420, t0 + 1.65); A.env(g2, t0 + 0.95, 0.06, 1, 0.2, 0.45);
+    }
+  },
+  /* The jumpscare shriek */
+  screech(A, t, p, o) {
+    const v = o.v || 1, g = A.out(p, 0.85 * v, 0.6), sh = A.shaper(30, g);
+    const bp = A.filt('bandpass', 2400, 2, sh); A.noise(t, 1.2, bp, 1.5);
+    bp.frequency.setValueAtTime(4200, t); bp.frequency.exponentialRampToValueAtTime(1100, t + 1.1);
+    [1760, 1864, 2217, 2489].forEach((f) => { const os = A.osc('sawtooth', f, t, 1.1, A.filt('lowpass', 5000, 0.7, sh)); os.frequency.setValueAtTime(f * 1.3, t); os.frequency.exponentialRampToValueAtTime(f * 0.55, t + 1.0); });
+    A.env(g, t, 0.004, 1, 0.35, 0.8);
+    const g2 = A.out(null, 1.1 * v, 0.5), o3 = A.osc('sine', 75, t, 1.3, g2); o3.frequency.exponentialRampToValueAtTime(26, t + 1.1); A.env(g2, t, 0.003, 1, 0.1, 1.1);
+  },
+  crack(A, t, p) { for (let i = 0; i < 5; i++) { const tt = t + i * rr(0.03, 0.09), g = A.out(p, 0.8, 0.2, 2); A.noise(tt, 0.04, A.filt('highpass', 1600, 0.7, g), 1.6); A.env(g, tt, 0.001, 1, 0.005, 0.03); } },
+  cry(A, t, p, o) {
+    for (let k = 0; k < ri(3, 5); k++) {
+      const tt = t + k * rr(0.8, 1.2), d = rr(0.45, 0.8), g = A.out(p, 0.2 * (o.v || 1), 1.0, 4), sum = A.ctx.createGain(); sum.connect(g);
+      const src = A.ctx.createGain(); VOWELS[pick(['u', 'o', 'a'])].slice(0, 2).forEach((f) => src.connect(A.filt('bandpass', f, 7, sum)));
+      const os = A.osc('sawtooth', rr(420, 480), tt, d, src); os.frequency.linearRampToValueAtTime(rr(300, 340), tt + d);
+      const tr = A.ctx.createOscillator(); tr.frequency.value = 7; const tg = A.ctx.createGain(); tg.gain.value = 18; tr.connect(tg); tg.connect(os.frequency); tr.start(tt); tr.stop(tt + d + 0.1);
+      A.noise(tt, d, src, 0.9); A.env(g, tt, 0.05, 1, d * 0.4, d * 0.5);
+    }
+  },
+  childLaugh(A, t, p) { SFX.giggle(A, t, p, { n: 4, v: 0.45 }); },
+  drag(A, t, p, o) { const dur = o.dur || 1.8, g = A.out(p, 0.5, 0.5, 3), lp = A.filt('lowpass', 420, 0.8, g); A.noise(t, dur, lp, 0.5); const n = 24, c = new Float32Array(n); for (let i = 0; i < n; i++) c[i] = rr(0.3, 1) * Math.sin(i / (n - 1) * Math.PI) + 0.01; g.gain.setValueCurveAtTime(c, t, dur); },
+  tick(A, t) { const g = A.out(null, 0.05, 0); A.osc('sine', 1800, t, 0.03, g); A.env(g, t, 0.001, 1, 0.01, 0.02); },
+  /* Gibberish voices (kept for the highlight reel's silly title cards) */
   babble(A, t, p, o) {
     const n = o.n || ri(4, 9), pitch = o.pitch || 180, vol = (o.v || 0.18) * (o.yell ? 1.8 : 1);
     const vs = Object.keys(VOWELS);
@@ -1043,18 +1120,39 @@ function portraitTex(i, empty = false) {
     noiseFill(g, w, h, 18);
   }, { clamp: true });
 }
-function scaryFaceTex() {
-  return canvasTex(256, 256, (g, w, h) => {
+/* Jumpscare faces: gaunt, hollow eye sockets with pinprick pupils, a mouth that's too long. variant 1 = the Mother (red pupils). */
+function scaryFaceTex(variant = 0) {
+  return canvasTex(512, 512, (g, w, h) => {
     g.clearRect(0, 0, w, h);
-    const f = g.createRadialGradient(w / 2, h / 2, 10, w / 2, h / 2, w / 2); f.addColorStop(0, 'rgba(235,235,225,1)'); f.addColorStop(0.7, 'rgba(180,185,180,.95)'); f.addColorStop(1, 'rgba(0,0,0,0)');
-    g.fillStyle = f; g.beginPath(); g.ellipse(w / 2, h / 2, w * 0.38, h * 0.48, 0, 0, TAU); g.fill();
-    g.fillStyle = '#000'; [[0.36, 0.4], [0.64, 0.4]].forEach(([x, y]) => { g.beginPath(); g.ellipse(w * x, h * y, 22, 30, 0, 0, TAU); g.fill(); });
-    g.fillStyle = 'rgba(255,40,40,.9)'; [[0.36, 0.42], [0.64, 0.42]].forEach(([x, y]) => { g.beginPath(); g.arc(w * x, h * y, 4, 0, TAU); g.fill(); });
-    g.fillStyle = '#050000'; g.beginPath(); g.ellipse(w / 2, h * 0.72, 30, 50, 0, 0, TAU); g.fill();
-    g.strokeStyle = 'rgba(40,0,0,.6)'; g.lineWidth = 2; for (let i = 0; i < 12; i++) { g.beginPath(); g.moveTo(w / 2 + rr(-60, 60), h * 0.2); g.lineTo(w / 2 + rr(-80, 80), h * rr(0.3, 0.9)); g.stroke(); }
+    const cx = w / 2, cy = h * 0.5;
+    const halo = g.createRadialGradient(cx, cy, 80, cx, cy, w * 0.5); halo.addColorStop(0, 'rgba(0,0,0,0.92)'); halo.addColorStop(1, 'rgba(0,0,0,0)'); g.fillStyle = halo; g.fillRect(0, 0, w, h);
+    g.save(); g.beginPath();
+    g.moveTo(cx, cy - 235); g.bezierCurveTo(cx + 150, cy - 235, cx + 168, cy - 40, cx + 122, cy + 90); g.bezierCurveTo(cx + 92, cy + 190, cx + 42, cy + 248, cx, cy + 252);
+    g.bezierCurveTo(cx - 42, cy + 248, cx - 92, cy + 190, cx - 122, cy + 90); g.bezierCurveTo(cx - 168, cy - 40, cx - 150, cy - 235, cx, cy - 235); g.closePath();
+    const sk = g.createRadialGradient(cx, cy - 40, 20, cx, cy, 260); sk.addColorStop(0, variant ? '#cfc6b8' : '#d6d9cf'); sk.addColorStop(0.6, variant ? '#8d8376' : '#9ba198'); sk.addColorStop(1, '#262824');
+    g.fillStyle = sk; g.fill(); g.clip();
+    for (const sd of [-1, 1]) { const cg = g.createRadialGradient(cx + sd * 98, cy + 60, 5, cx + sd * 98, cy + 60, 95); cg.addColorStop(0, 'rgba(18,16,14,.8)'); cg.addColorStop(1, 'rgba(18,16,14,0)'); g.fillStyle = cg; g.fillRect(0, 0, w, h); }
+    const tg = g.createLinearGradient(0, cy - 235, 0, cy - 120); tg.addColorStop(0, 'rgba(10,10,10,.7)'); tg.addColorStop(1, 'rgba(10,10,10,0)'); g.fillStyle = tg; g.fillRect(0, 0, w, h);
+    g.strokeStyle = 'rgba(40,52,62,.4)'; g.lineWidth = 1.4;
+    for (let i = 0; i < 28; i++) { let x = cx + rr(-120, 120), y = cy + rr(-160, 140); g.beginPath(); g.moveTo(x, y); for (let k = 0; k < 6; k++) { x += rr(-14, 14); y += rr(-14, 14); g.lineTo(x, y); } g.stroke(); }
+    for (const sd of [-1, 1]) {
+      const ex = cx + sd * 62, ey = cy - 50;
+      const eg = g.createRadialGradient(ex, ey, 4, ex, ey, 74); eg.addColorStop(0, 'rgba(0,0,0,1)'); eg.addColorStop(0.55, 'rgba(0,0,0,.96)'); eg.addColorStop(1, 'rgba(0,0,0,0)');
+      g.fillStyle = eg; g.beginPath(); g.ellipse(ex, ey, 64, 54, sd * 0.2, 0, TAU); g.fill();
+      g.fillStyle = variant ? 'rgba(255,40,20,.95)' : 'rgba(255,255,240,.95)'; g.beginPath(); g.arc(ex + sd * 7, ey + 6, variant ? 6 : 3.5, 0, TAU); g.fill();
+      g.strokeStyle = 'rgba(0,0,0,.85)'; g.lineWidth = 5; g.beginPath(); g.moveTo(ex + rr(-8, 8), ey + 38); g.bezierCurveTo(ex + rr(-15, 15), ey + 90, ex + rr(-15, 15), ey + 140, ex + rr(-10, 10), ey + rr(170, 230)); g.stroke();
+    }
+    g.fillStyle = 'rgba(0,0,0,.85)'; g.beginPath(); g.ellipse(cx - 12, cy + 42, 6, 15, 0.3, 0, TAU); g.ellipse(cx + 12, cy + 42, 6, 15, -0.3, 0, TAU); g.fill();
+    g.fillStyle = '#040101'; g.beginPath(); g.moveTo(cx - 58, cy + 102); g.bezierCurveTo(cx - 64, cy + 205, cx - 26, cy + 252, cx, cy + 252); g.bezierCurveTo(cx + 26, cy + 252, cx + 64, cy + 205, cx + 58, cy + 102); g.bezierCurveTo(cx + 30, cy + 90, cx - 30, cy + 90, cx - 58, cy + 102); g.fill();
+    g.fillStyle = '#b8ae94';
+    for (let i = 0; i < 9; i++) { const tx = cx - 46 + i * 11; g.beginPath(); g.moveTo(tx, cy + 101); g.lineTo(tx + 9, cy + 101); g.lineTo(tx + 4 + rr(-2, 2), cy + 101 + rr(12, 28)); g.fill(); }
+    for (let i = 0; i < 6; i++) { const tx = cx - 30 + i * 11; g.beginPath(); g.moveTo(tx, cy + 238); g.lineTo(tx + 9, cy + 238); g.lineTo(tx + 4, cy + 238 - rr(10, 20)); g.fill(); }
+    g.strokeStyle = 'rgba(15,10,6,.65)'; g.lineWidth = 1.3;
+    for (let i = 0; i < 16; i++) { let x = cx + rr(-130, 130), y = cy + rr(-200, 200); g.beginPath(); g.moveTo(x, y); for (let k = 0; k < 7; k++) { x += rr(-12, 12); y += rr(-12, 12); g.lineTo(x, y); } g.stroke(); }
+    g.restore();
+    noiseFill(g, w, h, 26);
   }, { clamp: true });
 }
-
 const TEX = {};
 function buildTextures() {
   TEX.wpFoyer = wallpaperTex({ base: '#4a1216', motif: '#7a5a26', kind: 'damask', grime: 18 });
@@ -1077,7 +1175,13 @@ function buildTextures() {
   TEX.dust = radialTex([[0, 'rgba(255,255,255,1)'], [0.4, 'rgba(255,255,255,.4)'], [1, 'rgba(255,255,255,0)']], 32);
   TEX.blob = radialTex([[0, 'rgba(0,0,0,.75)'], [0.6, 'rgba(0,0,0,.35)'], [1, 'rgba(0,0,0,0)']]);
   TEX.shaft = canvasTex(64, 128, (g, w, h) => { const gr = g.createLinearGradient(0, 0, 0, h); gr.addColorStop(0, 'rgba(160,180,255,.5)'); gr.addColorStop(1, 'rgba(160,180,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, w, h); const sg = g.createLinearGradient(0, 0, w, 0); sg.addColorStop(0, 'rgba(0,0,0,1)'); sg.addColorStop(0.2, 'rgba(0,0,0,0)'); sg.addColorStop(0.8, 'rgba(0,0,0,0)'); sg.addColorStop(1, 'rgba(0,0,0,1)'); g.globalCompositeOperation = 'destination-out'; g.fillStyle = sg; g.fillRect(0, 0, w, h); }, { clamp: true });
-  TEX.cobweb = cobwebTex(); TEX.hand = handprintTex(); TEX.face = scaryFaceTex();
+  TEX.cobweb = cobwebTex(); TEX.hand = handprintTex(); TEX.face = scaryFaceTex(0); TEX.faceMother = scaryFaceTex(1);
+  TEX.silhouette = canvasTex(128, 256, (g, w, h) => {
+    g.clearRect(0, 0, w, h); g.fillStyle = 'rgba(0,0,0,0.96)'; g.filter = 'blur(1.5px)';
+    g.beginPath(); g.ellipse(64, 46, 17, 23, 0, 0, TAU); g.fill();
+    g.beginPath(); g.moveTo(52, 66); g.lineTo(76, 66); g.quadraticCurveTo(104, 76, 106, 120); g.lineTo(100, 236); g.lineTo(90, 236); g.lineTo(86, 140); g.lineTo(84, 256); g.lineTo(44, 256); g.lineTo(42, 140); g.lineTo(38, 236); g.lineTo(28, 236); g.lineTo(22, 120); g.quadraticCurveTo(24, 76, 52, 66); g.fill();
+    g.filter = 'none';
+  }, { clamp: true });
   TEX.portraits = []; for (let i = 0; i < 7; i++) TEX.portraits.push(portraitTex(i));
   TEX.portraitEmpty = portraitTex(6, true);
 }
@@ -1089,7 +1193,7 @@ const VHS_FRAG = `
 precision highp float;
 uniform sampler2D tDiffuse;
 uniform vec2 uRes;
-uniform float uTime, uGlitch, uNV, uFx, uBlack, uFlash, uStatic, uExposure, uFade, uVig, uWarp;
+uniform float uTime, uGlitch, uNV, uFx, uBlack, uFlash, uStatic, uExposure, uFade, uVig, uWarp, uPresence;
 varying vec2 vUv;
 float h21(vec2 p){ vec3 p3 = fract(vec3(p.xyx) * .1031); p3 += dot(p3, p3.yzx + 33.33); return fract((p3.x + p3.y) * p3.z); }
 vec3 aces(vec3 x){ return clamp((x * (2.51 * x + 0.03)) / (x * (2.43 * x + 0.59) + 0.14), 0.0, 1.0); }
@@ -1099,7 +1203,10 @@ void main(){
   float r2 = dot(cc, cc);
   float k = (0.09 + uWarp) * uFx;
   vec2 uv = 0.5 + cc * (1.0 + k * r2 * 1.8) / (1.0 + k * 0.45);
-  float t = uTime, g = uGlitch;
+  float t = uTime, g = uGlitch, pr = uPresence;
+  // something is near: the image breathes and bends
+  uv.x += sin(uv.y * 34.0 + t * 7.0) * 0.006 * pr + sin(uv.y * 130.0 - t * 23.0) * 0.0016 * pr;
+  uv.y += sin(uv.x * 19.0 + t * 3.0) * 0.003 * pr;
   float line = floor(uv.y * uRes.y * 0.5);
   uv.x += (h21(vec2(line, floor(t * 30.0))) - 0.5) * 0.0014 * uFx * (0.4 + g * 3.0);
   float bandPos = fract(-t * (0.045 + g * 0.35));
@@ -1115,6 +1222,7 @@ void main(){
   vec3 bl = (samp(uv + vec2(0.005, 0.0)) + samp(uv - vec2(0.005, 0.0))) * 0.5;
   float lc = dot(col, vec3(0.3, 0.59, 0.11)), lb = dot(bl, vec3(0.3, 0.59, 0.11));
   col = mix(col, vec3(lc) + (bl - vec3(lb)), 0.35 * min(uFx, 1.0));
+  col += samp(uv + vec2(0.018 * pr, 0.004 * pr)) * 0.18 * pr; // ghost double image
   col *= uExposure;
   if (uNV > 0.5) {
     float l = dot(col, vec3(0.3, 0.59, 0.11));
@@ -1122,18 +1230,20 @@ void main(){
     col = vec3(0.28, 1.0, 0.38) * (l * 1.15 + 0.035);
   } else {
     col = aces(col);
-    col *= vec3(1.04, 0.98, 1.06);
-    col = mix(vec3(dot(col, vec3(0.3, 0.59, 0.11))), col, 0.82);
+    col *= vec3(0.93, 0.99, 1.08);
+    float lum = dot(col, vec3(0.3, 0.59, 0.11));
+    col = mix(vec3(lum), col, 0.68 - 0.45 * pr);
+    col *= 1.0 - 0.25 * pr;
   }
   col = pow(max(col, 0.0), vec3(1.0 / 2.2));
-  col = col * 0.93 + 0.022;
+  col = col * 0.96 + 0.01;
   float sl = sin(vUv.y * uRes.y * 3.14159);
   col *= 1.0 - 0.13 * min(uFx, 1.2) * (0.5 + 0.5 * sl);
   float n = h21(vUv * uRes + fract(t * 7.13) * 1000.0);
   col += (n - 0.5) * (0.07 + uNV * 0.12 + g * 0.12) * uFx;
   col += band * n * 0.4 * g;
   col = mix(col, vec3(n * 0.9), clamp(uStatic, 0.0, 1.0));
-  col *= 1.0 - r2 * 1.4 * uVig;
+  col *= clamp(1.0 - r2 * 1.6 * uVig * (1.0 + pr * 0.8), 0.0, 1.0);
   if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) col = vec3(0.0);
   col = mix(col, vec3(1.0), uFlash);
   col *= (1.0 - uBlack) * (1.0 - uFade);
@@ -1141,7 +1251,7 @@ void main(){
 }`;
 const R = {
   renderer: null, scene: null, camera: null, rt: null, postMat: null, postScene: null, postCam: null, scale: 1,
-  fx: { glitch: 0, nv: 0, black: 0, flash: 0, stat: 0, exposure: 1, fade: 0, vig: 1, warp: 0 },
+  fx: { glitch: 0, nv: 0, black: 0, flash: 0, stat: 0, exposure: 1, fade: 0, vig: 1.2, warp: 0, presence: 0 },
   init() {
     const canvas = $('c');
     const r = this.renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: 'high-performance', alpha: false });
@@ -1149,14 +1259,14 @@ const R = {
     r.outputColorSpace = THREE.SRGBColorSpace;
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x000000);
-    this.scene.fog = new THREE.FogExp2(0x020203, 0.05);
+    this.scene.fog = new THREE.FogExp2(0x010102, 0.068);
     this.camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.05, 120);
     this.scene.add(this.camera);
     this.rt = new THREE.WebGLRenderTarget(4, 4, { type: THREE.HalfFloatType, depthBuffer: true });
     this.postMat = new THREE.ShaderMaterial({
       uniforms: {
         tDiffuse: { value: this.rt.texture }, uRes: { value: new THREE.Vector2(1, 1) }, uTime: { value: 0 }, uGlitch: { value: 0 }, uNV: { value: 0 },
-        uFx: { value: 1 }, uBlack: { value: 0 }, uFlash: { value: 0 }, uStatic: { value: 0 }, uExposure: { value: 1 }, uFade: { value: 0 }, uVig: { value: 1 }, uWarp: { value: 0 }
+        uFx: { value: 1 }, uBlack: { value: 0 }, uFlash: { value: 0 }, uStatic: { value: 0 }, uExposure: { value: 1 }, uFade: { value: 0 }, uVig: { value: 1 }, uWarp: { value: 0 }, uPresence: { value: 0 }
       },
       vertexShader: 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }',
       fragmentShader: VHS_FRAG, depthTest: false, depthWrite: false
@@ -1180,7 +1290,7 @@ const R = {
   render(time) {
     const u = this.postMat.uniforms, f = this.fx;
     u.uTime.value = time; u.uGlitch.value = f.glitch; u.uNV.value = f.nv; u.uFx.value = Settings.fx; u.uBlack.value = f.black;
-    u.uFlash.value = f.flash; u.uStatic.value = f.stat; u.uExposure.value = f.exposure; u.uFade.value = f.fade; u.uVig.value = f.vig; u.uWarp.value = f.warp;
+    u.uFlash.value = f.flash; u.uStatic.value = f.stat; u.uExposure.value = f.exposure; u.uFade.value = f.fade; u.uVig.value = f.vig; u.uWarp.value = f.warp; u.uPresence.value = f.presence;
     this.renderer.setRenderTarget(this.rt);
     this.renderer.render(this.scene, this.camera);
     this.renderer.setRenderTarget(null);
@@ -1192,9 +1302,9 @@ const R = {
 const L = {};
 function buildLights() {
   const s = R.scene;
-  L.hemi = new THREE.HemisphereLight(0x3a4468, 0x120c08, 0.55); s.add(L.hemi);
+  L.hemi = new THREE.HemisphereLight(0x2a3450, 0x0a0806, 0.14); s.add(L.hemi);
   L.nv = new THREE.AmbientLight(0xffffff, 0); s.add(L.nv);
-  L.flash = new THREE.SpotLight(0xfff0d8, 0, 32, 0.52, 0.55, 1.6);
+  L.flash = new THREE.SpotLight(0xf2eee0, 0, 26, 0.42, 0.4, 1.7);
   L.flash.position.set(0.12, -0.08, 0); L.flashTarget = new THREE.Object3D(); L.flashTarget.position.set(0, -0.1, -5);
   R.camera.add(L.flash); R.camera.add(L.flashTarget); L.flash.target = L.flashTarget;
   L.bots = []; for (let i = 0; i < 3; i++) { const sp = new THREE.SpotLight(0xfff4e0, 0, 20, 0.42, 0.6, 1.6); const tg = new THREE.Object3D(); s.add(sp); s.add(tg); sp.target = tg; L.bots.push(sp); }
@@ -1234,7 +1344,7 @@ function buildMaterials() {
   MAT.winView = new THREE.MeshBasicMaterial({ map: TEX.windowView, color: 0x6a7090, fog: false });
   MAT.rain = new THREE.MeshBasicMaterial({ map: TEX.rain, transparent: true, opacity: 0.55, depthWrite: false, fog: false });
   MAT.glass = new THREE.MeshBasicMaterial({ color: 0x8090b0, transparent: true, opacity: 0.12, depthWrite: false });
-  MAT.shaft = new THREE.MeshBasicMaterial({ map: TEX.shaft, transparent: true, opacity: 0.16, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });
+  MAT.shaft = new THREE.MeshBasicMaterial({ map: TEX.shaft, transparent: true, opacity: 0.09, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide, fog: false });
   MAT.cobweb = new THREE.MeshBasicMaterial({ map: TEX.cobweb, transparent: true, opacity: 0.55, depthWrite: false, side: THREE.DoubleSide, color: 0x9a9a9a });
   MAT.flame = new THREE.MeshBasicMaterial({ map: TEX.flame, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false });
   MAT.blob = new THREE.MeshBasicMaterial({ map: TEX.blob, transparent: true, depthWrite: false });
@@ -2192,7 +2302,7 @@ function updateLightPool(t, camPos, dt) {
   L.pool.forEach((pl, i) => {
     const s = _poolSel[i];
     if (!s || !srcLit(s, t)) { pl.intensity = 0; return; }
-    pl.position.copy(srcPos(s)); pl.color.copy(s.color); pl.distance = s.range; pl.intensity = s.base * flickerOf(s, t) * lvl;
+    pl.position.copy(srcPos(s)); pl.color.copy(s.color); pl.distance = s.range * 0.85; pl.intensity = s.base * flickerOf(s, t) * lvl * 0.72;
   });
 }
 function updateWeather(dt, t, allowThunder) {
@@ -2210,10 +2320,11 @@ function updateWeather(dt, t, allowThunder) {
   return Weather.flash;
 }
 function applyLightning(f) {
-  L.lightning.intensity = f * 2.5;
-  MAT.winView.color.setRGB(0.42 + f * 1.6, 0.44 + f * 1.6, 0.56 + f * 1.6);
+  G.flashNow = f;
+  L.lightning.intensity = f * 3;
+  MAT.winView.color.setRGB(0.24 + f * 1.8, 0.26 + f * 1.8, 0.36 + f * 1.8);
   MAT.glass.opacity = 0.12 + f * 0.3;
-  L.hemi.intensity = 0.55 * G.lightDim + f * 0.8;
+  L.hemi.intensity = 0.14 * G.lightDim + f * 1.1;
 }
 
 /* ════════════════════════════════════════════════════════════════════
@@ -2228,58 +2339,91 @@ function rimMat(rim, base, power, additive, extra = {}) {
     transparent: true, depthWrite: !additive, blending: additive ? THREE.AdditiveBlending : THREE.NormalBlending, side: THREE.DoubleSide, ...extra
   });
 }
-class SheetGhost {
+/* The Pale Woman: white dress, black hair over her face. She never moves smoothly. */
+class PaleWoman {
   constructor() {
-    const pts = [[0.001, 1.95], [0.17, 1.92], [0.29, 1.85], [0.37, 1.72], [0.41, 1.52], [0.43, 1.25], [0.46, 0.9], [0.53, 0.5], [0.62, 0.15], [0.68, 0]].map(([x, y]) => new THREE.Vector2(x, y));
-    this.geo = new THREE.LatheGeometry(pts, 26); this.base = this.geo.attributes.position.array.slice();
-    this.mat = new THREE.MeshLambertMaterial({ color: 0xf4f4ff, emissive: 0x8898c0, emissiveIntensity: 0.55, transparent: true, opacity: 0.94, side: THREE.DoubleSide });
-    this.group = new THREE.Group(); this.body = new THREE.Mesh(this.geo, this.mat); this.body.position.y = -1.0; this.group.add(this.body);
-    for (const x of [-0.13, 0.13]) { const e = new THREE.Mesh(GEO.circle, MAT.black); e.scale.set(0.1, 0.16, 1); e.position.set(x, 0.55, 0.405); e.rotation.y = x * 1.2; this.group.add(e); }
-    const m = new THREE.Mesh(GEO.circle, MAT.black); m.scale.set(0.12, 0.16, 1); m.position.set(0, 0.28, 0.43); this.group.add(m); this.mouthM = m;
-    this.group.visible = false; this.active = false; this.opacity = 0; this.recSize = 7; this.focus = this.group;
+    const pts = [[0.001, 1.46], [0.12, 1.45], [0.16, 1.32], [0.13, 1.12], [0.19, 0.82], [0.27, 0.42], [0.35, 0.06], [0.39, 0]].map(([x, y]) => new THREE.Vector2(x, y));
+    this.geo = new THREE.LatheGeometry(pts, 22); this.base = this.geo.attributes.position.array.slice();
+    this.mat = new THREE.MeshLambertMaterial({ color: 0xc4c2ba, emissive: 0x1c2024, side: THREE.DoubleSide, transparent: true, opacity: 1 });
+    this.skin = new THREE.MeshLambertMaterial({ color: 0xaeb2aa, emissive: 0x161a1a, transparent: true });
+    this.hairM = new THREE.MeshBasicMaterial({ color: 0x030303, transparent: true });
+    W.disposables.push(this.mat, this.skin, this.hairM);
+    this.group = new THREE.Group();
+    this.group.add(new THREE.Mesh(this.geo, this.mat));
+    for (const sx of [-1, 1]) {
+      const arm = new THREE.Mesh(GEO.cyl, this.skin); arm.scale.set(0.05, 0.85, 0.05); arm.position.set(sx * 0.17, 1.02, 0.02); arm.rotation.z = sx * 0.05; this.group.add(arm);
+      const hand = new THREE.Mesh(GEO.hand, this.skin); hand.scale.set(sx * 0.75, -0.9, 0.75); hand.position.set(sx * 0.18, 0.56, 0.03); this.group.add(hand);
+    }
+    const neck = new THREE.Mesh(GEO.cyl, this.skin); neck.scale.set(0.07, 0.16, 0.07); neck.position.y = 1.52; this.group.add(neck);
+    this.headG = new THREE.Group(); this.headG.position.y = 1.68; this.group.add(this.headG);
+    const head = new THREE.Mesh(GEO.sph, this.skin); head.scale.set(0.17, 0.22, 0.18); this.headG.add(head);
+    this.faceM = new THREE.MeshBasicMaterial({ map: TEX.face, transparent: true, opacity: 0 }); W.disposables.push(this.faceM);
+    const face = new THREE.Mesh(GEO.plane, this.faceM); face.scale.set(0.2, 0.25, 1); face.position.set(0, -0.01, 0.095); this.headG.add(face);
+    const back = new THREE.Mesh(GEO.sph, this.hairM); back.scale.set(0.2, 0.25, 0.19); back.position.set(0, 0.03, -0.025); this.headG.add(back);
+    const backHair = []; for (let i = 0; i < 12; i++) { const a = Math.PI * 0.55 + i / 11 * Math.PI * 0.9; backHair.push([GEO.box, Math.cos(a) * 0.09, -0.35, Math.sin(a) * -0.09 - 0.03, 0, 0, 0, 0.035, rr(0.6, 0.9), 0.02]); }
+    this.headG.add(new THREE.Mesh(mergeParts(backHair), this.hairM));
+    this.strands = [];
+    for (let i = 0; i < 9; i++) { const st = new THREE.Mesh(GEO.box, this.hairM); const x = -0.085 + i * 0.021, len = rr(0.5, 0.8); st.scale.set(0.024, len, 0.012); st.userData.x = x; st.position.set(x, 0.1 - len / 2, 0.105 + Math.abs(x) * -0.25); this.headG.add(st); this.strands.push(st); }
+    this.group.visible = false; this.active = false; this.opacity = 0; this.reveal = 0; this.recSize = 7; this.focus = this.headG;
+    this.shown = V3(); this.stepT = 0;
     W.root.add(this.group); W.entities.push(this); W.ghostObjs.push(this.group);
   }
-  float(a, b, speed = 3.2) { this.active = true; this.mode = 'float'; this.a = a.clone(); this.b = b.clone(); this.t = 0; this.dur = a.distanceTo(b) / speed; this.group.position.copy(a); this.group.rotation.y = Math.atan2(b.x - a.x, b.z - a.z); AudioSys.play('moan', a, { dur: this.dur + 0.5 }); }
+  ground(p) { const gy = Phys.groundAt(p.x, p.z, p.y + 0.5); return gy > -Infinity ? gy : p.y - 1.6; }
+  float(a, b, speed = 2.2) {
+    this.active = true; this.mode = 'float'; this.a = a.clone(); this.b = b.clone(); this.t = 0; this.dur = a.distanceTo(b) / speed; this.reveal = 0;
+    this.shown.set(a.x, this.ground(a), a.z); this.group.position.copy(this.shown); this.group.rotation.y = Math.atan2(b.x - a.x, b.z - a.z);
+    AudioSys.play('cry', a, { v: 0.9 });
+  }
   rush(cam) {
-    this.active = true; this.mode = 'rush'; this.t = 0;
+    this.active = true; this.mode = 'rush'; this.t = 0; this.reveal = 0;
     const fwd = cam.getWorldDirection(V3()); fwd.y = 0; fwd.normalize();
     let d = 7.5; while (d > 2.5 && Phys.blocked(cam.position, _v1.copy(cam.position).addScaledVector(fwd, d))) d -= 0.5;
-    this.group.position.copy(cam.position).addScaledVector(fwd, d); this.group.position.y = cam.position.y - 0.4;
-    AudioSys.play('whoosh', this.group.position, { dur: 0.8, v: 1.3 });
+    this.shown.copy(cam.position).addScaledVector(fwd, d); this.shown.y = Op.pos.y; this.group.position.copy(this.shown);
+    AudioSys.play('breath', this.shown, { n: 1, v: 1.4 });
   }
   hide() { this.active = false; }
   update(dt, t, cam) {
     if (this.active) {
-      this.t += dt;
+      this.t += dt; this.stepT -= dt;
+      let tgt = null;
       if (this.mode === 'float') {
-        const k = Math.min(1, this.t / this.dur);
-        this.group.position.lerpVectors(this.a, this.b, k); this.group.position.y += Math.sin(this.t * 3) * 0.15;
-        this.opacity = Math.min(1, this.t * 3, (this.dur - this.t) * 3 + 0.2);
+        const k = Math.min(1, this.t / this.dur); tgt = V3().lerpVectors(this.a, this.b, k); tgt.y = this.ground(tgt) + 0.04;
+        this.opacity = Math.min(1, this.t * 2, (this.dur - this.t) * 2 + 0.1);
         if (k >= 1) this.active = false;
-      } else if (this.mode === 'rush') {
-        const to = _v1.copy(cam.position).sub(this.group.position); to.y -= 0.35; const d = to.length();
-        this.group.position.addScaledVector(to.normalize(), Math.min(d, dt * (6 + this.t * 16)));
-        this.group.rotation.y = Math.atan2(to.x, to.z); this.opacity = Math.min(1, this.t * 4);
-        this.mouthM.scale.y = 0.16 + Math.min(this.t, 0.6) * 0.5;
-        if (d < 0.9) { this.active = false; bus.emit('inface', { pos: this.group.position.clone() }); }
+      } else {
+        const to = V3(cam.position.x - this.shown.x, 0, cam.position.z - this.shown.z), d = to.length();
+        tgt = this.shown.clone().addScaledVector(to.normalize(), Math.min(d, dt * (4 + this.t * 9)));
+        this.group.rotation.y = Math.atan2(to.x, to.z); this.opacity = 1; this.reveal = clamp(1 - (d - 1) / 3, 0, 1);
+        if (d < 1.0) { this.active = false; bus.emit('inface', { pos: this.shown.clone(), tex: TEX.face }); }
       }
-    } else this.opacity = Math.max(0, this.opacity - dt * 5);
-    this.apply(this.opacity, t);
+      if (tgt) {
+        // stop-motion: she only "arrives" in jumps
+        if (this.mode === 'rush') this.shown.copy(tgt);
+        else if (this.stepT <= 0) { this.stepT = rr(0.07, 0.24); this.shown.copy(tgt); if (chance(0.25)) this.headG.rotation.z = rr(-0.5, 0.5); }
+        else { this.shown.x = lerp(this.shown.x, tgt.x, 0.02); this.shown.z = lerp(this.shown.z, tgt.z, 0.02); }
+      }
+      this.group.position.copy(this.shown);
+      if (chance(0.03)) this.group.rotation.y += rr(-0.4, 0.4);
+    } else this.opacity = Math.max(0, this.opacity - dt * 6);
+    this.apply(this.opacity, this.reveal, t);
   }
-  apply(op, t) {
-    this.group.visible = op > 0.01; this.mat.opacity = op * 0.94;
+  apply(op, rev, t) {
+    this.group.visible = op > 0.01 && !(op > 0.5 && Math.sin(t * 91) > 0.985);
+    this.mat.opacity = op; this.skin.opacity = op; this.hairM.opacity = op; this.faceM.opacity = op * rev;
     if (!this.group.visible) return;
+    this.strands.forEach((st) => { st.position.x = st.userData.x + Math.sign(st.userData.x || 0.001) * rev * 0.09; st.rotation.z = -Math.sign(st.userData.x || 0.001) * rev * 0.35; });
+    this.headG.rotation.x = -rev * 0.25;
     const p = this.geo.attributes.position, a = p.array, b = this.base;
     for (let i = 0; i < a.length; i += 3) {
-      const y = b[i + 1]; if (y > 0.95) continue;
-      const k = 1 - y / 0.95, ang = Math.atan2(b[i + 2], b[i]);
-      const w = Math.sin(ang * 5 + t * 5) * 0.08 * k + Math.sin(ang * 3 - t * 3.3) * 0.05 * k;
-      a[i] = b[i] * (1 + w); a[i + 2] = b[i + 2] * (1 + w); a[i + 1] = y + Math.sin(ang * 6 + t * 6) * 0.06 * k;
+      const y = b[i + 1]; if (y > 0.5) continue;
+      const k = 1 - y / 0.5, ang = Math.atan2(b[i + 2], b[i]);
+      const w = Math.sin(ang * 6 + t * 3) * 0.07 * k + Math.sin(ang * 11 - t * 2.1) * 0.04 * k;
+      a[i] = b[i] * (1 + w); a[i + 2] = b[i + 2] * (1 + w); a[i + 1] = y + Math.sin(ang * 7 + t * 4) * 0.04 * k;
     }
     p.needsUpdate = true;
   }
-  rec(a, o) { const p = this.group.position; a[o] = p.x; a[o + 1] = p.y; a[o + 2] = p.z; a[o + 3] = this.group.rotation.y; a[o + 4] = this.opacity; a[o + 5] = this.mouthM.scale.y; a[o + 6] = this.active ? 1 : 0; }
-  play(a, b, f, o, t) { this.group.position.set(lerp(a[o], b[o], f), lerp(a[o + 1], b[o + 1], f), lerp(a[o + 2], b[o + 2], f)); this.group.rotation.y = lerpAngle(a[o + 3], b[o + 3], f); this.mouthM.scale.y = b[o + 5]; this.opacity = lerp(a[o + 4], b[o + 4], f); this.apply(this.opacity, t); }
+  rec(a, o) { const p = this.group.position; a[o] = p.x; a[o + 1] = p.y; a[o + 2] = p.z; a[o + 3] = this.group.rotation.y; a[o + 4] = this.opacity; a[o + 5] = this.reveal; a[o + 6] = this.headG.rotation.z; }
+  play(a, b, f, o, t) { this.group.position.set(b[o], b[o + 1], b[o + 2]); this.group.rotation.y = b[o + 3]; this.headG.rotation.z = b[o + 6]; this.opacity = lerp(a[o + 4], b[o + 4], f); this.apply(this.opacity, b[o + 5], t); }
 }
 /* Only visible through NIGHT VISION */
 class WispGhost {
@@ -2293,9 +2437,14 @@ class WispGhost {
     this.group.visible = false; this.active = false; this.recSize = 5; this.focus = this.group; this.nvOnly = true;
     W.root.add(this.group); W.entities.push(this); W.ghostObjs.push(this.group);
   }
-  start(points) { this.active = true; this.pts = points; this.i = 0; this.group.position.copy(points[0]); }
+  start(points) { this.active = true; this.pts = points; this.i = 0; this.lunge = null; this.group.position.copy(points[0]); }
+  startLunge(cam) { this.lunge = cam; }
   update(dt, t, nv) {
-    if (this.active && this.pts) {
+    if (this.active && this.lunge) {
+      const to = _v1.copy(this.lunge.position).sub(this.group.position); to.y = 0; const d = to.length();
+      this.group.position.addScaledVector(to.normalize(), Math.min(d, dt * 8)); this.group.rotation.y = Math.atan2(to.x, to.z);
+      if (d < 1.0) { this.lunge = null; this.active = false; bus.emit('inface', { pos: this.group.position.clone(), tex: TEX.face }); }
+    } else if (this.active && this.pts) {
       const tgt = this.pts[this.i + 1];
       if (!tgt) this.active = false;
       else {
@@ -2329,6 +2478,41 @@ class ShadowFigure {
   apply(al, t) { this.group.visible = al > 0.01; this.mat.uniforms.uA.value = al; this.mat.uniforms.uTime.value = t; this.eyeMat.opacity = al; this.group.children[1].rotation.z = Math.sin(t * 0.7) * 0.1; }
   rec(a, o) { const p = this.group.position; a[o] = p.x; a[o + 1] = p.y; a[o + 2] = p.z; a[o + 3] = this.group.rotation.y; a[o + 4] = this.alpha; }
   play(a, b, f, o, t) { this.group.position.set(b[o], b[o + 1], b[o + 2]); this.group.rotation.y = b[o + 3]; this.alpha = lerp(a[o + 4], b[o + 4], f); this.apply(this.alpha, t); }
+}
+/* The Watcher: stands behind the operator and only moves while you are not looking */
+class Watcher {
+  constructor() {
+    this.mat = rimMat(0x3a2838, 0x010102, 2.4, false); this.group = new THREE.Group();
+    const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.17, 1.2, 4, 10), this.mat); body.position.y = 1.0; body.scale.z = 0.7; this.group.add(body);
+    this.head = new THREE.Mesh(GEO.sph, this.mat); this.head.scale.set(0.24, 0.3, 0.25); this.head.position.y = 1.86; this.group.add(this.head);
+    for (const sx of [-1, 1]) { const arm = new THREE.Mesh(new THREE.CapsuleGeometry(0.045, 1.0, 3, 6), this.mat); arm.position.set(sx * 0.22, 1.05, 0.02); arm.rotation.z = sx * 0.04; this.group.add(arm); }
+    this.eyeMat = new THREE.MeshBasicMaterial({ color: 0xe8e8e0, transparent: true, fog: false }); W.disposables.push(this.eyeMat, this.mat);
+    for (const x of [-0.05, 0.05]) { const e = new THREE.Mesh(GEO.sph, this.eyeMat); e.scale.setScalar(0.022); e.position.set(x, 1.9, 0.115); this.group.add(e); }
+    this.alpha = 0; this.active = false; this.recSize = 5; this.focus = this.head; this.group.visible = false;
+    W.root.add(this.group); W.entities.push(this); W.ghostObjs.push(this.group);
+  }
+  show(pos, faceTo) { this.active = true; this.alpha = 1; this.group.position.copy(pos); if (faceTo) this.faceTo(faceTo); }
+  faceTo(p) { this.group.rotation.y = Math.atan2(p.x - this.group.position.x, p.z - this.group.position.z); }
+  vanish() { this.active = false; this.alpha = 0; }
+  update(dt, t) { this.apply(this.alpha, t); }
+  apply(al, t) { this.group.visible = al > 0.01; this.mat.uniforms.uA.value = al; this.mat.uniforms.uTime.value = t; this.eyeMat.opacity = al; this.head.rotation.z = Math.sin(t * 0.9) * 0.12; }
+  rec(a, o) { const p = this.group.position; a[o] = p.x; a[o + 1] = p.y; a[o + 2] = p.z; a[o + 3] = this.group.rotation.y; a[o + 4] = this.alpha; }
+  play(a, b, f, o, t) { this.group.position.set(b[o], b[o + 1], b[o + 2]); this.group.rotation.y = b[o + 3]; this.alpha = b[o + 4]; this.apply(this.alpha, t); }
+}
+/* Someone standing outside the window — only visible while lightning flashes */
+class WindowFigure {
+  constructor() {
+    this.mat = new THREE.MeshBasicMaterial({ map: TEX.silhouette, transparent: true, depthWrite: false, fog: false }); W.disposables.push(this.mat);
+    this.mesh = new THREE.Mesh(GEO.plane, this.mat); this.mesh.visible = false; this.mesh.renderOrder = 7;
+    this.win = -1; this.until = 0; this.recSize = 2;
+    W.root.add(this.mesh); W.entities.push(this); W.ghostObjs.push(this.mesh);
+  }
+  placeAt(i) { const w = W.windows[i]; if (!w) return; this.win = i; this.mesh.position.copy(w.pos).addScaledVector(w.n, 0.05); this.mesh.position.x += w.right.x * rr(-0.15, 0.15); this.mesh.position.z += w.right.z * rr(-0.15, 0.15); this.mesh.rotation.set(0, w.rot, 0); this.mesh.scale.set(w.w * 0.75, w.h * 1.05, 1); }
+  arm(i, until) { this.placeAt(i); this.until = until; }
+  update(t) { this.apply(t < this.until ? 1 : 0); }
+  apply(armed) { this.mesh.visible = armed > 0.5 && this.win >= 0 && G.flashNow > 0.2; }
+  rec(a, o) { a[o] = this.win; a[o + 1] = G.t < this.until ? 1 : 0; }
+  play(a, b, f, o) { if (b[o] !== this.win && b[o] >= 0) this.placeAt(b[o]); this.apply(b[o + 1]); }
 }
 /* The doll. It is somewhere else every time you look back. */
 class Doll {
@@ -2409,10 +2593,10 @@ class FaceJump {
   trigger(cam, dur = 0.7, face = TEX.face) { this.mat.map = face; this.t = 0; this.dur = dur; this.active = 1; this.cam = cam; }
   update(dt, cam) {
     if (this.active) {
-      this.t += dt; const k = this.t / this.dur;
-      const d = lerp(1.6, 0.35, Math.min(1, k * 3)); this.scale = lerp(0.8, 1.4, Math.min(1, k * 3));
+      this.t += dt; const k = this.t / this.dur, lunge = Math.min(1, this.t / 0.1);
+      const d = lerp(1.1, 0.3, lunge); this.scale = lerp(0.3, 0.44, lunge) * (1 + Math.sin(this.t * 60) * 0.02);
       const fwd = cam.getWorldDirection(_v1); this.mesh.position.copy(cam.position).addScaledVector(fwd, d);
-      this.mesh.position.x += rr(-0.02, 0.02); this.mesh.position.y += rr(-0.02, 0.02);
+      this.mesh.position.x += rr(-0.012, 0.012); this.mesh.position.y += rr(-0.012, 0.012);
       if (k >= 1) this.active = 0;
     }
     this.apply(this.active, this.scale, cam);
@@ -2441,6 +2625,9 @@ class Mother {
     this.eyeMat = new THREE.MeshBasicMaterial({ color: 0xff2010, fog: false });
     for (const x of [-0.09, 0.09]) { const e = new THREE.Mesh(GEO.sph, this.eyeMat); e.scale.set(0.07, 0.05, 0.04); e.position.set(x, 0.05, 0.33); this.headG.add(e); }
     this.mouth = new THREE.Mesh(GEO.sph, MAT.black); this.mouth.scale.set(0.12, 0.05, 0.05); this.mouth.position.set(0, -0.22, 0.31); this.headG.add(this.mouth);
+    this.faceMat = new THREE.MeshBasicMaterial({ map: TEX.faceMother, transparent: true }); W.disposables.push(this.faceMat);
+    const face = new THREE.Mesh(GEO.plane, this.faceMat); face.scale.set(0.36, 0.48, 1); face.position.set(0, -0.02, 0.2); this.headG.add(face);
+    this.mouth.visible = false; this.headG.children.forEach((c) => { if (c.material === this.eyeMat) c.visible = false; });
     this.arms = [-1, 1].map((s) => {
       const g = new THREE.Group(); g.position.set(s * 0.45, 2.65, 0); this.group.add(g);
       const a = new THREE.Mesh(GEO.cyl, skin); a.scale.set(0.08, 1.5, 0.08); a.position.y = -0.75; g.add(a);
@@ -2453,7 +2640,7 @@ class Mother {
   update(dt, t) { this.alpha = this.active ? Math.min(1, this.alpha + dt * 1.2) : Math.max(0, this.alpha - dt * 1.5); this.apply(this.alpha, this.mouthOpen, this.reach, t); }
   apply(al, mo, re, t) {
     this.group.visible = al > 0.01; if (!this.group.visible) return;
-    this.cloth.opacity = al; this.skin.opacity = al;
+    this.cloth.opacity = al; this.skin.opacity = al; this.faceMat.opacity = al;
     this.mouth.scale.set(0.12 + mo * 0.06, 0.05 + mo * 0.3, 0.05);
     this.headG.rotation.z = Math.sin(t * 1.3) * 0.12 + (mo > 0.5 ? Math.sin(t * 40) * 0.06 : 0);
     this.arms.forEach((g, i) => { g.rotation.x = -lerp(0.15, 1.45, re) + Math.sin(t * 5 + i) * 0.08; g.rotation.z = (i ? -1 : 1) * lerp(0.15, 0.05, re); });
@@ -2471,105 +2658,99 @@ class Mother {
    Explorer = body (movement, animation, speech). Controller = brain.
    ════════════════════════════════════════════════════════════════════ */
 const CREW_DEFS = [
-  { id: 'chad', name: 'CHAD', color: 0xff7a1a, css: '#ff9a4a', pitch: 118, fs: 0.85, walk: 1.75, run: 4.4, emoji: '😎',
-    scream: { pitch: 240, vowel: 'a', v: 1.25, dur: 1.7, rise: 2.0, dist: 5 } },
-  { id: 'priya', name: 'PRIYA', color: 0x7a5cff, css: '#b09bff', pitch: 205, fs: 1.15, walk: 1.55, run: 4.1, emoji: '🧐',
-    scream: { pitch: 430, vowel: 'e', v: 0.85, dur: 1.2, rise: 1.6 } },
-  { id: 'gary', name: 'GARY', color: 0x3cc47c, css: '#6fe0a0', pitch: 165, fs: 1.0, walk: 1.45, run: 4.9, emoji: '😰',
-    scream: { pitch: 540, vowel: 'i', v: 1.0, dur: 2.3, rise: 2.2, dist: 4 } }
+  { id: 'chad', name: 'CHAD', css: '#e0a070', jacket: 0x4a2a22, pants: 0x22242a, skin: 0xc89a7a, hair: 0x2a1a10, pitch: 108, fs: 0.85, walk: 1.7, run: 4.4,
+    scream: { pitch: 230, vowel: 'a', v: 1.25, dur: 1.7, rise: 1.9, dist: 8 } },
+  { id: 'priya', name: 'PRIYA', css: '#b8a8e0', jacket: 0x34324a, pants: 0x1c1c22, skin: 0x9a6a4a, hair: 0x0e0806, pitch: 190, fs: 1.12, walk: 1.5, run: 4.1,
+    scream: { pitch: 420, vowel: 'e', v: 0.95, dur: 1.4, rise: 1.6, dist: 7 } },
+  { id: 'gary', name: 'GARY', css: '#a8c890', jacket: 0x3a4230, pants: 0x2a2620, skin: 0xd8b494, hair: 0x5a3a20, pitch: 150, fs: 1.0, walk: 1.45, run: 4.8,
+    scream: { pitch: 520, vowel: 'i', v: 1.05, dur: 2.2, rise: 2.1, dist: 8 } }
 ];
 const LINES = {
   chad: {
-    intro: ["What's up BOO CREW! Tonight: HOLLOWELL MANOR!", "Smash that like button, ghosts. If you can."],
-    idle: ["Chad's first! As always.", "This place is mid.", "Bro, film my good side. Both sides.", "Yo ghosts! Come get some!", "I'm not scared, I'm just... cardio.", "Comment below if you think this is real.", "Use code SPOOKY for 10% off nothing."],
-    investigate: ["Yo, what was that? Let's GO!", "Chad's on it!", "Follow me, camera guy!"],
-    scared: ["AAAAAAAAAH!!!", "NOPE NOPE NOPE", "BRO WHAT", "WHAT THE—", "I'M NOT CRYING!"],
-    after: ["Okay that one was real.", "I meant to do that.", "That was... staged. Right?", "Nobody saw that. Delete it."],
-    flee: ["RUN RUN RUN!", "Every man for himself!", "TACTICAL RETREAT!"], trip: ["MY ANKLE!", "I'm okay!! I'm okay."],
-    keepup: ["Camera guy, keep up!", "Yo, where'd the camera go?"],
-    yell: ["CAMERA GUY! Over HERE!", "Tell me you got that!!", "BRO, FILM IT!"],
-    cold: ["Is it cold, or am I just that cool?"], boss: ["IT'S THE LADY FROM THE PAINTING!", "MOTHER?! NO!"], exit: ["THE DOOR'S OPEN! GO GO GO!"],
-    wake: ["What year is it?"], grab: ["PUT ME DOWN, MA'AM!"]
+    intro: ["Okay. We're rolling. Hollowell Manor. It's almost midnight.", "Stay together. Nobody splits up. Nobody."],
+    idle: ["Keep the camera on me.", "This place is fine. It's... fine.", "Did the temperature just drop?", "Okay, who moved that?", "Why are all the clocks stopped?", "I thought I saw someone upstairs.", "Don't stop recording. Whatever happens."],
+    investigate: ["What was that?", "I heard it too. This way.", "Stay behind me."],
+    scared: ["WHAT THE—", "NO NO NO NO", "GET BACK! GET BACK!", "OH GOD—"],
+    after: ["That... that was real.", "We need to leave. We need to leave NOW.", "I'm fine. I'm... I'm not fine."],
+    flee: ["RUN!", "MOVE! MOVE!"], trip: ["Something grabbed my leg!"],
+    keepup: ["Camera. Stay close.", "Where'd you go? Don't do that."],
+    yell: ["FILM IT! FILM IT!", "Did you get that?!", "Point the camera THERE!"],
+    cold: ["...why can I see my breath?"], boss: ["The painting... it's EMPTY.", "SHE'S HERE! SHE'S HERE!"], exit: ["THE DOOR! GO!"],
+    wake: ["What happened? Why is it so cold?"], grab: ["LET GO OF ME!"], missing: ["Where's {X}? {X}?!", "Has anyone seen {X}?"], deny: ["...that wasn't me."]
   },
   priya: {
-    intro: ["For the record: ghosts are not real.", "I brought a thermometer. For science."],
-    idle: ["That's just the wind.", "Old houses settle. It's called physics.", "Classic pareidolia.", "Note the drafty windows. Explains everything.", "My hypothesis: raccoons."],
-    investigate: ["Let me debunk this.", "Fascinating. Probably pipes."],
-    debunk: ["That's clearly fishing wire.", "Probably a raccoon. A very tall raccoon.", "Somebody's got a projector.", "Swamp gas. Indoors. Somehow.", "Trick of the light. Obviously."],
-    wrong: ["That's... statistically... unlikely...", "I need to revise my thesis—", "Okay, peer review THIS—"],
-    faint: ["*faints dramatically*"], wake: ["What happened? Did you get that?", "I was resting my eyes.", "That was a controlled faint."],
-    scared: ["EEEEK!", "WHAT IS THAT", "NOT POSSIBLE!"], after: ["I... will need more data."], flee: ["Strategic exit!"],
-    yell: ["Are you even filming??", "Point the camera at the EVIDENCE!"], keepup: ["Stay close, we need footage."],
-    cold: ["Cold spot. Probably a draft. Probably."], boss: ["That's... a very tall lady.", "I retract EVERYTHING!"], exit: ["Exit! Now! Scientifically!"],
-    trip: ["Ow! Gravity is real at least."], grab: ["UNHAND ME, HYPOTHESIS!"]
+    intro: ["There's a rational explanation for everything.", "Thermometer says twelve degrees. In here. That's... odd."],
+    idle: ["It's just the house settling.", "Old wiring. That's all it is.", "Low-frequency sound can cause dread. That's all this is.", "Stop whispering. Seriously. Who's whispering?", "The temperature keeps dropping."],
+    investigate: ["Let me look. There's an explanation.", "It's probably the pipes."],
+    debunk: ["It's a draft. It's just a draft.", "Somebody's playing a trick on us. Right?", "There's a logical... there has to be—", "A reflection. It was a reflection."],
+    wrong: ["No. No, that's not possible—", "I can't explain that. I can't explain that."],
+    faint: ["..."], wake: ["How long was I out?", "Something was standing over me."],
+    scared: ["WHAT IS THAT?!", "OH MY GOD", "STAY AWAY!"], after: ["I... I don't have an explanation."], flee: ["Go! Go!"],
+    yell: ["Are you filming this?!", "Point the camera at it!"], keepup: ["Stay close. Please."],
+    cold: ["Cold spot. It's moving. Cold spots don't MOVE."], boss: ["That's... that's the woman in the painting.", "I take it back. I take it ALL back."], exit: ["The door! Now!"],
+    trip: ["Something pulled me down!"], grab: ["GET OFF ME!"], missing: ["{X}? This isn't funny.", "Where did {X} go?"], deny: ["That wasn't me. I'm right here."]
   },
   gary: {
-    intro: ["I want it on the record I didn't want to come.", "Can we... not?"],
-    idle: ["Did you hear that?", "Can we go home now?", "I didn't sign up for this. I literally didn't sign anything.", "I'm staying right behind you, camera guy.", "My mom thinks I'm at the library."],
-    hide: ["Hiding behind you. Don't move.", "You go first. You have the camera.", "I'm your shadow now."],
-    investigate: ["Nope.", "I'll... guard the hallway."],
-    scared: ["I WANT MY MOM!", "AAAAAAAAAAAAAAAAAA", "NOT LIKE THIS!", "WHY IS IT ALWAYS ME"],
-    flee: ["I'M OUT!", "BYEEE!", "Nope. Nope. NOPE."], after: ["I think I peed a little."],
-    yell: ["ARE YOU EVEN FILMING??", "Did you get that?! Please say you got that."], keepup: ["Don't leave me!!"],
-    cold: ["Why is it cold? Why is it COLD?"], boss: ["NOT MY MOMMY!", "SHE'S SO TALL!"], exit: ["DOOR! DOOR! DOOR!"],
-    trip: ["I'm dead. Tell my mom."], wake: ["Is it over?"], grab: ["TAKE CHAD INSTEAD!"]
+    intro: ["I didn't want to come. For the record.", "Can we please just go home?"],
+    idle: ["Did you hear that?", "Something's breathing. Do you hear it?", "I'm staying right behind you.", "I keep hearing my name.", "Don't leave me alone. Please.", "It's watching us. I can feel it."],
+    hide: ["I'm behind you. Don't move.", "You go first. You have the light."],
+    investigate: ["No. No way.", "I'll... stay here."],
+    scared: ["I WANT TO GO HOME!", "NOT LIKE THIS!", "HELP! SOMEBODY HELP!"],
+    flee: ["I'M OUT!", "NO NO NO—"], after: ["I can't stop shaking."],
+    yell: ["Did you film that?! Tell me you filmed that!", "Camera! THERE!"], keepup: ["Don't leave me!"],
+    cold: ["Why is it cold? Why is it COLD?"], boss: ["She's coming. She's coming!", "Don't look at her. DON'T LOOK AT HER."], exit: ["DOOR! DOOR!"],
+    trip: ["Something's got my foot!"], wake: ["Is it over?"], grab: ["NO! PLEASE!"], missing: ["Where's {X}? Where's {X}?!"], deny: ["...that wasn't me. That wasn't me!"]
   }
 };
 const Crew = { list: [], talkT: 0, yellT: 0 };
-const POSE_KEYS = ['walkPh', 'walkAmt', 'tilt', 'roll', 'jump', 'armL', 'armR', 'flail', 'faint', 'fall', 'mouth', 'eyes', 'squash', 'light'];
+const POSE_KEYS = ['walkPh', 'walkAmt', 'tilt', 'roll', 'jump', 'armL', 'armR', 'flail', 'faint', 'fall', 'mouth', 'eyes', 'squash', 'light', 'twist', 'glow', 'headDown'];
 
 class Explorer {
   constructor(def, idx, pos) {
     Object.assign(this, { def, idx, id: def.id, name: def.name, pos: pos.clone(), rotY: Math.PI, vel: V3(), vy: 0, route: [], run: false, speech: null,
       state: 'idle', stateT: 0, stateDur: 0, reactHeat: 0, escaped: false, faceTarget: null, lastPos: pos.clone(), stuckT: 0, recSize: 5 + POSE_KEYS.length });
-    this.p = { walkPh: 0, walkAmt: 0, tilt: 0, roll: 0, jump: 0, armL: 0, armR: 0, flail: 0, faint: 0, fall: 0, mouth: 0, eyes: 1, squash: 1, light: 1 };
-    this.pupil = [V3(), V3()]; this.pupilV = [V3(), V3()];
+    this.p = { walkPh: 0, walkAmt: 0, tilt: 0, roll: 0, jump: 0, armL: 0, armR: 0, flail: 0, faint: 0, fall: 0, mouth: 0, eyes: 1, squash: 1, light: 1, twist: 0, glow: 0, headDown: 0 };
     this.build();
     this.controller = new BotController(this);
     W.entities.push(this);
   }
   build() {
-    const d = this.def, mat = this.mat = new THREE.MeshLambertMaterial({ color: d.color, emissive: new THREE.Color(d.color).multiplyScalar(0.12) });
-    W.disposables.push(mat);
-    const root = this.root = new THREE.Group(), body = this.body = new THREE.Group(); root.add(body);
-    const bean = this.bean = new THREE.Mesh(new THREE.CapsuleGeometry(0.32, 0.7, 5, 12), mat); bean.position.y = 1.03; bean.scale.z = 0.88; body.add(bean);
-    const belly = new THREE.Mesh(GEO.sph, new THREE.MeshLambertMaterial({ color: new THREE.Color(d.color).lerp(new THREE.Color(0xffffff), 0.35) })); belly.scale.set(0.42, 0.5, 0.2); belly.position.set(0, 0.85, 0.2); body.add(belly);
-    W.disposables.push(belly.material);
-    this.head = new THREE.Object3D(); this.head.position.set(0, 1.45, 0.2); body.add(this.head);
-    const white = new THREE.MeshBasicMaterial({ color: 0xf8f8f0 }), black = MAT.black; W.disposables.push(white);
-    this.eyes = [-0.12, 0.12].map((x, i) => {
-      const g = new THREE.Group(); g.position.set(x, 1.47, 0.24); body.add(g);
-      const w = new THREE.Mesh(GEO.sph, white); w.scale.setScalar(0.2); g.add(w);
-      const pu = new THREE.Mesh(GEO.sph, black); pu.scale.set(0.09, 0.09, 0.05); pu.position.z = 0.085; g.add(pu);
-      return { g, pu };
-    });
-    this.mouthM = new THREE.Mesh(GEO.sph, black); this.mouthM.position.set(0, 1.23, 0.285); body.add(this.mouthM);
+    const d = this.def;
+    const lam = (c) => { const m = new THREE.MeshLambertMaterial({ color: c }); W.disposables.push(m); return m; };
+    const jacket = this.mat = lam(d.jacket), pants = lam(d.pants), skin = lam(d.skin), hairM = lam(d.hair);
     const limb = (r, l) => new THREE.CapsuleGeometry(r, l, 3, 8);
-    this.legs = [-0.14, 0.14].map((x) => { const g = new THREE.Group(); g.position.set(x, 0.42, 0); body.add(g); const m = new THREE.Mesh(limb(0.085, 0.22), mat); m.position.y = -0.19; g.add(m); const sh = new THREE.Mesh(GEO.box, MAT.black); sh.scale.set(0.16, 0.08, 0.24); sh.position.set(0, -0.38, 0.04); g.add(sh); return g; });
-    this.arms = [-1, 1].map((s) => { const g = new THREE.Group(); g.position.set(s * 0.33, 1.2, 0); body.add(g); const m = new THREE.Mesh(limb(0.06, 0.36), mat); m.position.y = -0.22; g.add(m); const h = new THREE.Mesh(GEO.sph, mat); h.scale.setScalar(0.15); h.position.y = -0.46; g.add(h); return g; });
-    const fl = new THREE.Mesh(GEO.cyl, MAT.iron); fl.scale.set(0.06, 0.22, 0.06); fl.rotation.x = Math.PI / 2; fl.position.set(0, -0.48, 0.1); this.arms[1].add(fl);
-    this.lightAnchor = new THREE.Object3D(); this.lightAnchor.position.set(0, -0.48, 0.22); this.arms[1].add(this.lightAnchor);
-    this.lightAim = new THREE.Object3D(); this.lightAim.position.set(0, -1.2, 6); this.arms[1].add(this.lightAim);
-    // accessories
+    const root = this.root = new THREE.Group(), body = this.body = new THREE.Group(); root.add(body);
+    this.legs = [-0.11, 0.11].map((x) => { const g = new THREE.Group(); g.position.set(x, 0.92, 0); body.add(g); const m = new THREE.Mesh(limb(0.075, 0.7), pants); m.position.y = -0.44; g.add(m); const sh = new THREE.Mesh(GEO.box, MAT.black); sh.scale.set(0.11, 0.08, 0.26); sh.position.set(0, -0.88, 0.05); g.add(sh); return g; });
+    const up = this.upper = new THREE.Group(); body.add(up);
+    const torso = new THREE.Mesh(limb(0.2, 0.42), jacket); torso.position.y = 1.2; torso.scale.set(1, 1, 0.7); up.add(torso);
+    const hips = new THREE.Mesh(GEO.box, pants); hips.scale.set(0.34, 0.16, 0.2); hips.position.y = 0.96; up.add(hips);
+    const neck = new THREE.Mesh(GEO.cyl, skin); neck.scale.set(0.08, 0.14, 0.08); neck.position.y = 1.53; up.add(neck);
+    const hg = this.headG = new THREE.Group(); hg.position.set(0, 1.67, 0); up.add(hg);
+    const skull = new THREE.Mesh(GEO.sph, skin); skull.scale.set(0.2, 0.25, 0.22); hg.add(skull);
+    const nose = new THREE.Mesh(GEO.sph, skin); nose.scale.set(0.03, 0.045, 0.04); nose.position.set(0, -0.01, 0.105); hg.add(nose);
+    this.eyeMat = new THREE.MeshBasicMaterial({ color: 0x140e0c }); W.disposables.push(this.eyeMat);
+    this.eyes = [-0.045, 0.045].map((x) => { const e = new THREE.Mesh(GEO.sph, this.eyeMat); e.scale.set(0.03, 0.018, 0.02); e.position.set(x, 0.025, 0.098); hg.add(e); return e; });
+    for (const x of [-0.045, 0.045]) { const b = new THREE.Mesh(GEO.box, hairM); b.scale.set(0.045, 0.01, 0.01); b.position.set(x, 0.055, 0.102); hg.add(b); }
+    this.mouthM = new THREE.Mesh(GEO.sph, MAT.black); this.mouthM.position.set(0, -0.065, 0.095); hg.add(this.mouthM);
+    this.head = new THREE.Object3D(); this.head.position.set(0, 0.02, 0.04); hg.add(this.head);
+    this.arms = [-1, 1].map((sx) => { const g = new THREE.Group(); g.position.set(sx * 0.25, 1.43, 0); up.add(g); const m = new THREE.Mesh(limb(0.055, 0.48), jacket); m.position.y = -0.3; g.add(m); const h = new THREE.Mesh(GEO.sph, skin); h.scale.set(0.09, 0.1, 0.09); h.position.y = -0.6; g.add(h); return g; });
+    const fl = new THREE.Mesh(GEO.cyl, MAT.iron); fl.scale.set(0.045, 0.2, 0.045); fl.rotation.x = Math.PI / 2; fl.position.set(0, -0.6, 0.09); this.arms[1].add(fl);
+    this.lightAnchor = new THREE.Object3D(); this.lightAnchor.position.set(0, -0.6, 0.2); this.arms[1].add(this.lightAnchor);
+    this.lightAim = new THREE.Object3D(); this.lightAim.position.set(0, -1.3, 6); this.arms[1].add(this.lightAim);
     if (d.id === 'chad') {
-      const cm = new THREE.MeshLambertMaterial({ color: 0xc81e2a }); W.disposables.push(cm);
-      const cap = new THREE.Mesh(new THREE.SphereGeometry(0.31, 14, 8, 0, TAU, 0, Math.PI / 2), cm); cap.position.y = 1.56; cap.scale.set(1.02, 0.7, 0.95); body.add(cap);
-      const brim = new THREE.Mesh(GEO.box, cm); brim.scale.set(0.34, 0.03, 0.3); brim.position.set(0, 1.6, -0.36); body.add(brim);
-      const sg = new THREE.Mesh(GEO.box, MAT.black); sg.scale.set(0.4, 0.07, 0.04); sg.position.set(0, 1.72, 0.12); sg.rotation.x = -0.4; body.add(sg);
+      const hair = new THREE.Mesh(GEO.sph, hairM); hair.scale.set(0.21, 0.16, 0.23); hair.position.set(0, 0.07, -0.01); hg.add(hair);
+      const cm = lam(0x3a1414), cap = new THREE.Mesh(new THREE.SphereGeometry(0.115, 12, 6, 0, TAU, 0, Math.PI / 2), cm); cap.position.y = 0.06; cap.scale.set(1, 0.8, 1.05); hg.add(cap);
+      const brim = new THREE.Mesh(GEO.box, cm); brim.scale.set(0.14, 0.015, 0.1); brim.position.set(0, 0.07, -0.15); hg.add(brim);
     } else if (d.id === 'priya') {
-      const gm = new THREE.MeshBasicMaterial({ color: 0x151515 }); W.disposables.push(gm);
-      for (const x of [-0.12, 0.12]) { const r = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.015, 6, 14), gm); r.position.set(x, 1.47, 0.34); body.add(r); }
-      const br = new THREE.Mesh(GEO.box, gm); br.scale.set(0.06, 0.015, 0.015); br.position.set(0, 1.49, 0.34); body.add(br);
-      const hm = new THREE.MeshLambertMaterial({ color: 0x1a0e08 }); W.disposables.push(hm);
-      const hair = new THREE.Mesh(new THREE.SphereGeometry(0.33, 14, 8, 0, TAU, 0, Math.PI / 2.2), hm); hair.position.y = 1.5; hair.scale.set(1, 0.75, 1); body.add(hair);
-      const pony = new THREE.Mesh(GEO.sph, hm); pony.scale.set(0.16, 0.34, 0.16); pony.position.set(0, 1.45, -0.34); body.add(pony);
+      const hair = new THREE.Mesh(GEO.sph, hairM); hair.scale.set(0.22, 0.25, 0.24); hair.position.set(0, 0.035, -0.025); hg.add(hair);
+      const pony = new THREE.Mesh(GEO.sph, hairM); pony.scale.set(0.08, 0.24, 0.08); pony.position.set(0, -0.1, -0.14); hg.add(pony);
+      for (const x of [-0.045, 0.045]) { const r = new THREE.Mesh(new THREE.TorusGeometry(0.028, 0.004, 5, 12), MAT.black); r.position.set(x, 0.025, 0.112); hg.add(r); }
     } else {
-      const bm = new THREE.MeshLambertMaterial({ color: 0x3a4a6a }); W.disposables.push(bm);
-      const hat = new THREE.Mesh(new THREE.SphereGeometry(0.33, 14, 8, 0, TAU, 0, Math.PI / 2), bm); hat.position.y = 1.55; hat.scale.set(1, 0.95, 1); body.add(hat);
-      const pom = new THREE.Mesh(GEO.sph, new THREE.MeshLambertMaterial({ color: 0xd8c040 })); pom.scale.setScalar(0.14); pom.position.y = 1.88; body.add(pom); W.disposables.push(pom.material);
-      const scarf = new THREE.Mesh(new THREE.TorusGeometry(0.29, 0.06, 6, 16), pom.material); scarf.rotation.x = Math.PI / 2; scarf.position.y = 1.12; body.add(scarf);
+      const bm = lam(0x1c2230), hat = new THREE.Mesh(new THREE.SphereGeometry(0.12, 12, 6, 0, TAU, 0, Math.PI / 2), bm); hat.position.y = 0.03; hat.scale.set(1, 1.05, 1.05); hg.add(hat);
+      const fold = new THREE.Mesh(new THREE.TorusGeometry(0.113, 0.02, 5, 14), bm); fold.rotation.x = Math.PI / 2; fold.position.y = 0.04; hg.add(fold);
+      const scarf = new THREE.Mesh(new THREE.TorusGeometry(0.1, 0.035, 5, 14), lam(0x5a4a22)); scarf.rotation.x = Math.PI / 2; scarf.position.y = 1.5; up.add(scarf);
     }
-    const blob = this.blob = new THREE.Mesh(GEO.plane, MAT.blob); blob.rotation.x = -Math.PI / 2; blob.scale.setScalar(1.1); blob.position.y = 0.02; blob.renderOrder = 2; root.add(blob);
+    const blob = this.blob = new THREE.Mesh(GEO.plane, MAT.blob); blob.rotation.x = -Math.PI / 2; blob.scale.setScalar(0.9); blob.position.y = 0.02; blob.renderOrder = 2; root.add(blob);
     this.light = L.bots[this.idx];
     W.root.add(root);
     this.applyPose(0);
@@ -2587,13 +2768,16 @@ class Explorer {
     if (this.route.length > 1 && this.pos.distanceTo(this.route[1]) < this.route[0].distanceTo(this.route[1])) this.route.shift();
   }
   stop() { this.route = []; this.goal = null; }
-  get busy() { return this.state === 'react' || this.state === 'faint' || this.state === 'trip' || this.state === 'pose' || this.state === 'grabbed'; }
+  get busy() { return this.state === 'react' || this.state === 'faint' || this.state === 'trip' || this.state === 'pose' || this.state === 'grabbed' || this.state === 'possessed' || this.state === 'reveal'; }
+  /* Walk to a corner and stand facing the wall. Silent. */
+  possess(spot, wallYaw) { this.stop(); this.speech = null; this.controller.mode = 'possessedWalk'; this.wallYaw = wallYaw; this.goTo(spot, false); }
+  reveal() { this.setState('reveal', 1.9); this.stop(); AudioSys.play('crack', this.headPos()); AudioSys.play('scream', this.headPos(), { pitch: this.def.scream.pitch * 0.45, v: 1.4, dur: 1.6, vowel: 'o', dist: 25, rise: 1.2 }); }
   get moving() { return this.route.length > 0; }
   headPos(out = V3()) { this.head.updateWorldMatrix(true, false); return out.setFromMatrixPosition(this.head.matrixWorld); }
   say(text, dur = 2.8, yell = false) {
     if (!text || this.escaped) return;
     this.speech = { text, t0: G.t, until: G.t + dur, yell };
-    AudioSys.play('babble', this.headPos(), { pitch: this.def.pitch, fs: this.def.fs, n: Math.min(12, 3 + Math.floor(text.length / 6)), yell });
+    AudioSys.play('voice', this.headPos(), { pitch: this.def.pitch, fs: this.def.fs, n: Math.min(12, 3 + Math.floor(text.length / 6)), yell });
     Rec.event('say', { i: this.idx, text, dur, yell });
     Net.broadcast('say', { who: this.id, text });
   }
@@ -2608,7 +2792,7 @@ class Explorer {
     bus.emit('botReact', { ex: this });
     return true;
   }
-  faint(dur = rr(6, 8.5)) { this.stop(); this.setState('faint', dur); this.reactHeat = 1; AudioSys.play('faint', this.headPos()); if (this.id === 'priya') this.say('*faints dramatically*', 2.5); bus.emit('faint', { ex: this }); }
+  faint(dur = rr(6, 8.5)) { this.stop(); this.setState('faint', dur); this.reactHeat = 1; AudioSys.play('faint', this.headPos()); bus.emit('faint', { ex: this }); }
   trip() { this.stop(); this.setState('trip', 2.4); this.reactHeat = 1; AudioSys.play('thud', this.pos, { v: 0.8 }); this.line('trip', 2.2); bus.emit('trip', { ex: this }); }
   grabbed() { this.stop(); this.setState('grabbed', 1.2); this.reactHeat = 1; this.scream(); this.line('grab', 2, true); }
   /* ── per-frame body update ── */
@@ -2617,7 +2801,7 @@ class Explorer {
     this.controller.think(dt, t);
     this.stateT += dt;
     const P = this.p;
-    let tgtWalk = 0, tgtTilt = 0, tgtFlail = 0, tgtArmL = 0, tgtArmR = 0, tgtFaint = 0, tgtFall = 0, tgtMouth = 0, tgtEyes = 1, tgtSq = 1, jump = 0;
+    let tgtWalk = 0, tgtTilt = 0, tgtFlail = 0, tgtArmL = 0, tgtArmR = 0, tgtFaint = 0, tgtFall = 0, tgtMouth = 0, tgtEyes = 1, tgtSq = 1, jump = 0, tgtTwist = 0, tgtGlow = 0, tgtDown = 0, twistK = 3;
     const talking = this.speech && t < this.speech.until;
     if (talking) tgtMouth = 0.25 + 0.35 * Math.abs(Math.sin(t * 18));
     switch (this.state) {
@@ -2638,6 +2822,12 @@ class Explorer {
       case 'pose': { tgtArmL = -0.4; tgtArmR = -0.4; if (this.stateT > this.stateDur) this.setState('idle', 0); break; }
       case 'yell': { tgtArmL = 1.1; tgtMouth = Math.max(tgtMouth, 0.6); if (this.stateT > this.stateDur) this.setState('idle', 0); break; }
       case 'grabbed': { jump = Math.sin(Math.min(1, this.stateT / this.stateDur) * Math.PI) * 1.6; tgtFlail = 1; tgtMouth = 1; tgtEyes = 1.7; if (this.stateT > this.stateDur) this.faint(rr(4, 5.5)); break; }
+      case 'possessed': { tgtArmL = -0.05; tgtArmR = -0.05; tgtTilt = 0.05; tgtDown = 1; this.reactHeat = 0; this.speech = null; if (this.wallYaw !== undefined) this.rotY = lerpAngle(this.rotY, this.wallYaw, 1 - Math.exp(-4 * dt)); break; }
+      case 'reveal': {
+        const k = this.stateT; tgtTwist = Math.PI; twistK = 16; tgtGlow = 1; tgtMouth = 1; tgtArmL = 0.8; tgtArmR = 0.8; tgtTilt = -0.12; jump = k < 0.3 ? Math.sin(k / 0.3 * Math.PI) * 0.2 : 0; this.reactHeat = 1;
+        if (k > this.stateDur) { this.p.glow = 0; this.controller.mode = 'idle'; this.faint(rr(4, 5)); }
+        break;
+      }
     }
     // locomotion
     let speed = 0;
@@ -2670,8 +2860,9 @@ class Explorer {
     P.walkPh += dt * speed * 3.4;
     P.tilt = damp(P.tilt, tgtTilt, 8, dt); P.flail = damp(P.flail, tgtFlail, 10, dt); P.armL = damp(P.armL, tgtArmL, 8, dt); P.armR = damp(P.armR, tgtArmR, 8, dt);
     P.faint = damp(P.faint, tgtFaint, tgtFaint > P.faint ? 5 : 3, dt); P.fall = damp(P.fall, tgtFall, 9, dt); P.mouth = damp(P.mouth, tgtMouth, 20, dt); P.eyes = damp(P.eyes, tgtEyes, 10, dt);
-    P.squash = damp(P.squash, tgtSq, 18, dt); P.jump = jump; P.roll = Math.sin(P.walkPh * 0.5) * 0.05 * P.walkAmt + (this.state === 'react' ? Math.sin(t * 30) * 0.08 : 0);
-    P.light = 1;
+    P.squash = damp(P.squash, tgtSq, 18, dt); P.jump = jump;
+    P.twist = damp(P.twist, tgtTwist, twistK, dt); P.glow = damp(P.glow, tgtGlow, 10, dt); P.headDown = damp(P.headDown, tgtDown, 2, dt); P.roll = Math.sin(P.walkPh * 0.5) * 0.05 * P.walkAmt + (this.state === 'react' ? Math.sin(t * 30) * 0.08 : 0);
+    P.light = this.state === 'possessed' || this.state === 'reveal' || this.state === 'faint' ? 0 : 1;
     if (this.pos.z > 13.2 && G.escape) { this.escaped = true; bus.emit('escaped', { ex: this }); }
     // safety net: never let a bad frame corrupt the body (and the recording)
     if (Number.isFinite(this.pos.x + this.pos.y + this.pos.z)) (this.safePos || (this.safePos = V3())).copy(this.pos);
@@ -2685,28 +2876,22 @@ class Explorer {
     r.position.set(this.pos.x, this.pos.y + P.jump, this.pos.z); r.rotation.y = this.rotY;
     this.body.rotation.set(P.tilt - P.faint * 1.5 + P.fall * 1.42, 0, P.roll);
     const sq = P.squash; this.body.scale.set(1 / Math.sqrt(sq), sq, 1 / Math.sqrt(sq));
-    this.bean.position.y = 1.03 + Math.abs(Math.sin(P.walkPh)) * 0.05 * P.walkAmt;
-    const sw = Math.sin(P.walkPh) * 0.75 * P.walkAmt;
+    this.upper.position.y = Math.abs(Math.sin(P.walkPh)) * 0.035 * P.walkAmt;
+    const sw = Math.sin(P.walkPh) * 0.6 * P.walkAmt;
     this.legs[0].rotation.x = sw; this.legs[1].rotation.x = -sw;
     this.arms.forEach((a, i) => {
-      const s = i ? 1 : -1, raise = i ? P.armR : P.armL;
-      a.rotation.x = (i ? sw : -sw) * 0.8 - raise * 2.4 + P.flail * Math.sin(t * 23 + i * 2) * 0.9;
-      a.rotation.z = s * (0.12 + P.flail * (1.3 + Math.sin(t * 29 + i) * 0.8) + (raise < 0 ? -raise * 1.5 : 0));
+      const sgn = i ? 1 : -1, raise = i ? P.armR : P.armL;
+      a.rotation.x = (i ? sw : -sw) * 0.7 - raise * 1.9 + P.flail * Math.sin(t * 21 + i * 2) * 0.8;
+      a.rotation.z = sgn * (0.06 + P.flail * (1.0 + Math.sin(t * 27 + i) * 0.6) + (raise < 0 ? -raise * 1.2 : 0));
     });
-    this.mouthM.scale.set(0.13, 0.025 + P.mouth * 0.16, 0.05);
-    // googly eyes: spring pupils driven by body motion
-    const acc = _v3.set(-(r.position.x - (this._lx ?? r.position.x)), -(r.position.y - (this._ly ?? r.position.y)) * 1.5, 0);
-    this._lx = r.position.x; this._ly = r.position.y;
-    this.eyes.forEach((e, i) => {
-      const off = this.pupil[i], v = this.pupilV[i];
-      v.x += (-off.x * 60 + acc.x * 40 + Math.sin(t * 3 + i) * 0.4) * dt; v.y += (-off.y * 60 + acc.y * 40 - 0.6) * dt;
-      v.multiplyScalar(Math.exp(-dt * 4)); off.addScaledVector(v, dt);
-      const L2 = Math.hypot(off.x, off.y); if (L2 > 0.05) off.multiplyScalar(0.05 / L2);
-      e.pu.position.set(off.x, off.y, 0.085); e.g.scale.setScalar(P.eyes);
-    });
+    // head: looks down when possessed, and can twist all the way round
+    this.headG.rotation.set(P.headDown * 0.7 - P.tilt * 0.4, P.twist, Math.sin(t * 13) * 0.04 * P.glow);
+    this.mouthM.scale.set(0.035 + P.mouth * 0.012, 0.008 + P.mouth * 0.055, 0.02);
+    for (const e of this.eyes) e.scale.set(0.03 * P.eyes, 0.018 * P.eyes, 0.02);
+    this.eyeMat.color.setRGB(lerp(0.08, 1, P.glow), lerp(0.055, 1, P.glow), lerp(0.047, 0.95, P.glow));
     // flashlight
     const lt = this.light;
-    if (P.light > 0.5 && r.visible) { this.lightAnchor.updateWorldMatrix(true, false); lt.position.setFromMatrixPosition(this.lightAnchor.matrixWorld); this.lightAim.updateWorldMatrix(true, false); lt.target.position.setFromMatrixPosition(this.lightAim.matrixWorld); lt.intensity = 16 * G.lightDim + 4; }
+    if (P.light > 0.5 && r.visible) { this.lightAnchor.updateWorldMatrix(true, false); lt.position.setFromMatrixPosition(this.lightAnchor.matrixWorld); this.lightAim.updateWorldMatrix(true, false); lt.target.position.setFromMatrixPosition(this.lightAim.matrixWorld); lt.intensity = (9 * G.lightDim + 2) * (G.flashMul < 0.5 && G.presence > 0.5 ? 0.1 : 1); }
     else lt.intensity = 0;
   }
   rec(a, o) { a[o] = this.pos.x; a[o + 1] = this.pos.y; a[o + 2] = this.pos.z; a[o + 3] = this.rotY; a[o + 4] = this.escaped ? 1 : 0; POSE_KEYS.forEach((k, i) => a[o + 5 + i] = this.p[k]); }
@@ -2727,7 +2912,7 @@ class BotController {
   dispose() { this.offNoise(); }
   get me() { return this.ex.id; }
   onNoise(n) {
-    const ex = this.ex; if (ex.escaped || ex.busy || G.boss || !G.playing) return;
+    const ex = this.ex; if (ex.escaped || ex.busy || G.boss || !G.playing || this.mode.startsWith('possessed')) return;
     const d = ex.pos.distanceTo(n.pos) + Math.abs(ex.pos.y - n.pos.y) * 3;
     if (d > 28 * (n.loud || 1)) return;
     let p = this.me === 'chad' ? 0.95 : this.me === 'priya' ? 0.6 : 0.2;
@@ -2741,6 +2926,7 @@ class BotController {
   }
   arrived() {
     const ex = this.ex;
+    if (this.mode === 'possessedWalk') { this.mode = 'possessed'; ex.setState('possessed', 999); return; }
     if (this.mode === 'investigate' && this.inv) { ex.faceTarget = this.inv.pos.clone(); this.waitT = rr(2.5, 4.5); this.mode = 'look'; }
     else if (this.mode === 'flee') { this.waitT = rr(2, 4); this.mode = 'cower'; }
     else if (this.mode === 'exit') { /* keep running straight out of the door */ ex.goTo(V3(rr(-1, 1), 0, 16.5), true); }
@@ -2804,7 +2990,7 @@ class BotController {
     if (this.tripT !== undefined) { this.tripT -= dt; if (this.tripT <= 0) { this.tripT = undefined; if (ex.run && !ex.busy) ex.trip(); } }
     if (this.faintAfter !== undefined && ex.state !== 'react') { this.faintAfter = undefined; if (!ex.busy) { ex.say(pick(LINES.priya.wrong), 2.2); ex.faint(); } }
     this.thinkT -= dt; if (this.thinkT > 0) return; this.thinkT = 0.25;
-    if (!G.playing || ex.busy) return;
+    if (!G.playing || ex.busy || this.mode.startsWith('possessed')) return;
     this.perceive(t);
     if (ex.busy) return;
     const opos = Op.pos;
@@ -2950,7 +3136,13 @@ const Op = {
     cam.fov = this.fov; cam.updateProjectionMatrix();
     this.shaky = damp(this.shaky, this.angVel + sh * 6, 6, dt);
     // camera light
-    L.flash.intensity = this.light && !this.dead ? 55 : 0;
+    let fm = 1;
+    if (G.flashOutUntil > t) fm = 0;
+    else if (G.presence > 0.3) fm = vnoise(t * 23) > 0.45 - G.presence * 0.35 ? 1 : 0.05;
+    if (this.battery < 10) fm *= vnoise(t * 9 + 4) > -0.5 ? 1 : 0.15;
+    if ((fm < 0.5) !== (G.flashMul < 0.5) && this.light && !this.dead && chance(0.5)) AudioSys.play('click', null, { v: 0.5 });
+    G.flashMul = fm;
+    L.flash.intensity = this.light && !this.dead ? 48 * fm : 0;
     L.nv.intensity = this.nv ? 2.2 : 0;
   }
 };
@@ -2963,7 +3155,8 @@ const SCARE_INFO = {
   sheet: { name: 'SHEET GHOST', radius: 1.0 }, inface: { name: 'IN YOUR FACE', radius: 0.8 }, portrait: { name: 'SCREAMING PORTRAIT', radius: 0.6 },
   chair: { name: 'SLIDING CHAIR', radius: 0.6 }, chandelier: { name: 'CHANDELIER', radius: 0.9 }, doll: { name: 'CURSED DOLL', radius: 0.35 },
   wisp: { name: 'INVISIBLE GHOST', radius: 1.0 }, hands: { name: 'WINDOW HANDS', radius: 0.6 }, piano: { name: 'HAUNTED PIANO', radius: 0.8 },
-  shadow: { name: 'TALL SHADOW MAN', radius: 1.5 }, boss: { name: 'MANSION MOTHER', radius: 1.6 }
+  shadow: { name: 'TALL SHADOW MAN', radius: 1.5 }, boss: { name: 'MANSION MOTHER', radius: 1.6 },
+  follower: { name: 'THE WATCHER', radius: 0.6 }, possessed: { name: 'POSSESSED FRIEND', radius: 0.6 }
 };
 class Scare {
   constructor(type, o) {
@@ -2972,9 +3165,9 @@ class Scare {
   }
 }
 const Director = {
-  cur: null, next: 26, used: {}, ambientT: 10, scares: [], boss: null, mother: null, garyRoom: null,
-  reset() { this.cur = null; this.next = 26; this.used = {}; this.ambientT = 12; this.scares = []; this.boss = null; this.garyRoom = null; this.introStep = 0; },
-  busy() { return !!this.cur && this.cur.phase !== 'lure'; },
+  cur: null, next: 34, used: {}, dreadT: 20, scares: [], boss: null, mother: null, garyRoom: null, tension: 0, spike: 0, lastEnd: 0, tensT: 0,
+  reset() { this.cur = null; this.next = 34; this.used = {}; this.dreadT = 20; this.scares = []; this.boss = null; this.garyRoom = null; this.introStep = 0; this.tension = 0; this.spike = 0; this.lastEnd = 0; this.tensT = 0; },
+  busy() { return !!this.cur && this.cur.phase !== 'lure' && this.cur.phase !== 'possess'; },
   foci() {
     const out = [];
     const add = (s) => { for (const f of s.foci) out.push({ obj: f.obj || f, radius: f.radius || SCARE_INFO[s.type].radius, scare: s, nvOnly: s.nvOnly, loud: s.loud, persistent: s.persistent }); };
@@ -2998,21 +3191,30 @@ const Director = {
   update(dt) {
     const t = G.t;
     // intro banter
-    const intro = [[2.5, 'chad', 'intro'], [7, 'priya', 'intro'], [11.5, 'gary', 'intro'], [16, 'chad', 'intro']];
-    while (this.introStep < intro.length && t >= intro[this.introStep][0]) { const [, who, k] = intro[this.introStep++]; const ex = Crew.list.find((e) => e.id === who); if (ex) ex.line(k, 3.2); }
-    if (t > 20 && t < 21 && !this._tip) { this._tip = true; HUD.hint('Listen for noises — arrows show where sounds came from', 5); }
+    const intro = [[2.5, 'chad', 'intro'], [8, 'priya', 'intro'], [13, 'gary', 'intro'], [19, 'chad', 'intro']];
+    while (this.introStep < intro.length && t >= intro[this.introStep][0]) { const [, who, k] = intro[this.introStep++]; const ex = Crew.list.find((e) => e.id === who); if (ex) ex.line(k, 3.4); }
+    if (t > 24 && !this._tip) { this._tip = true; HUD.hint('Keep recording. Point the camera at whatever you hear.', 5); }
     if (!this.boss && t >= G.bossT && (!this.cur || t >= G.bossT + 4)) { if (this.cur) { this.finish(this.cur); this.cur = null; } this.startBoss(); }
-    if (this.cur) { this.runScare(this.cur, dt); if (this.cur.phase === 'done') { this.finish(this.cur); this.cur = null; this.next = t + lerp(15, 7, clamp(t / G.bossT, 0, 1)) + rr(-2, 3); } }
+    if (this.cur) { this.runScare(this.cur, dt); if (this.cur.phase === 'done') { this.finish(this.cur); this.cur = null; this.lastEnd = t; this.next = t + lerp(24, 12, clamp(t / G.bossT, 0, 1)) + rr(-3, 4); } }
     else if (!this.boss && t >= this.next && t < G.bossT - 12) this.startScare();
     if (this.boss) this.runBoss(this.boss, dt);
-    // ambient events between scares
-    this.ambientT -= dt;
-    if (this.ambientT <= 0 && t > 12) { this.ambientT = rr(7, 14); if (!this.busy()) this.ambient(); }
+    // dread between scares: small things that make you turn around
+    this.dreadT -= dt;
+    if (this.dreadT <= 0 && t > 22 && !this.boss) { this.dreadT = lerp(rr(9, 16), rr(6, 11), clamp(t / G.bossT, 0, 1)); if (!this.busy()) this.dread(); }
+    // tension bed: builds while nothing happens, peaks during a scare, drops to silence just before one
+    const c = this.cur;
+    let tgt = clamp(0.1 + (t - this.lastEnd) / 70, 0.1, 0.5);
+    if (c) tgt = c.phase === 'lure' || c.phase === 'possess' ? 0.6 : c.phase === 'cue' ? 0 : c.phase === 'active' ? 0.95 : 0.35;
+    if (this.boss) tgt = this.boss.phase === 'intro' ? 0 : 1;
+    tgt = Math.max(tgt, c && c.phase === 'cue' ? 0 : this.spike); this.spike = Math.max(0, this.spike - dt * 0.12);
+    this.tension = damp(this.tension, tgt, tgt > this.tension ? 0.7 : 1.2, dt);
+    if ((this.tensT -= dt) <= 0) { this.tensT = 0.3; AudioSys.setTension(c && c.phase === 'cue' ? 0 : this.tension); }
   },
   startScare() {
-    const t = G.t, early = t < 140;
-    const pool = [['chair', 3, 3], ['hands', 3, 3], ['sheet', 3, 4], ['portrait', 2.5, 3], ['piano', 2.5, 2], ['wisp', 2, 3], ['shadow', 2, 3]];
-    if (!early) pool.push(['doll', 2.5, 2], ['chandelier', 2.2, 2], ['inface', 2, 3]);
+    const t = G.t;
+    const pool = [['hands', 3, 2], ['chair', 2, 2], ['portrait', 2.5, 2], ['piano', 2, 1], ['shadow', 3, 2], ['wisp', 2, 2], ['follower', 3, 2]];
+    if (t > 60) pool.push(['sheet', 3.5, 3]);
+    if (t > 110) pool.push(['doll', 2.5, 1], ['possessed', 3.2, 1], ['chandelier', 2, 2], ['inface', 2.2, 2]);
     const here = Nav.nearest(Op.pos);
     const fixedPos = { piano: W.piano && W.piano.pos, chandelier: (W.chandeliers.find((c) => !c.broken) || {}).group?.position };
     const reach = (ty) => { const p = fixedPos[ty]; if (!p) return 1; return clamp(1.6 - Nav.pathLen(here, Nav.nearest(p, false)) / 22, 0.2, 1.6); };
@@ -3035,7 +3237,8 @@ const Director = {
       case 'portrait': return ['hallway', 'foyer', 'stairwell', 'nursery'].includes(pr);
       case 'piano': return !!W.piano;
       case 'hands': return W.windows.length > 0;
-      case 'inface': return !Op.dead;
+      case 'inface': case 'follower': return !Op.dead;
+      case 'possessed': return Crew.list.filter((e) => !e.escaped).length >= 2;
       case 'doll': return !!Director.doll && G.t < G.bossT - 60;
       default: return true;
     }
@@ -3048,9 +3251,9 @@ const Director = {
         const room = this.pickRoom(rooms); if (!room) return null;
         let [a, b] = pick(W.rooms[room].sheetPaths); if (chance(0.5)) [a, b] = [b, a];
         const s = new Scare('sheet', { room, pos: a.clone(), lure: room !== this.playerRoom(), intensity: 1.4, cueSound: 'whisper', data: { a, b } });
-        s.foci = [{ obj: G_.sheet.group, radius: 1.0 }]; return s;
+        s.foci = [{ obj: G_.sheet.focus, radius: 0.8 }]; return s;
       }
-      case 'inface': { const s = new Scare('inface', { room: this.playerRoom(), pos: Op.pos.clone(), intensity: 2.2, cueSound: 'whisper' }); s.foci = [{ obj: G_.sheet.group, radius: 0.9 }]; s.data.target = true; return s; }
+      case 'inface': { const s = new Scare('inface', { room: this.playerRoom(), pos: Op.pos.clone(), intensity: 2.2, cueSound: 'whisper' }); s.foci = [{ obj: G_.sheet.focus, radius: 0.8 }]; s.data.target = true; return s; }
       case 'portrait': {
         const cam = R.camera, fwd = cam.getWorldDirection(V3());
         const ps = W.portraits.filter((p) => p !== W.mother);
@@ -3085,6 +3288,25 @@ const Director = {
         const s = new Scare('hands', { room, pos: w.pos.clone(), lure: room !== this.playerRoom(), intensity: 1.3, cueSound: 'knock' }); s.data.win = i; s.foci = [{ obj: G_.hands.focus, radius: 0.7 }]; return s;
       }
       case 'piano': { const p = W.piano; const s = new Scare('piano', { room: p.room, pos: p.pos.clone().setY(p.pos.y + 1), lure: p.room !== this.playerRoom(), intensity: 1.3, loud: true, cueSound: 'pianoNote' }); s.data.lureSound = 'musicbox'; s.foci = [{ obj: p.focus, radius: 0.9 }]; return s; }
+      case 'follower': { const s = new Scare('follower', { room: this.playerRoom(), pos: Op.pos.clone(), intensity: 1.6 }); s.foci = [{ obj: G_.watcher.focus, radius: 0.6 }]; s.missAt = 0.08; return s; }
+      case 'possessed': {
+        const cands = Crew.list.filter((e) => !e.escaped && !e.busy && !e.controller.mode.startsWith('possessed') && !Scoring.isVisible(e.head));
+        if (!cands.length) return null;
+        const ex = pick(cands), room = W.rooms[Nav.nearest(ex.pos).room]; if (!room || room.name === 'stairwell') return null;
+        let best = null, bd = 1e9;
+        for (const [cx, cz] of [[room.x0, room.z0], [room.x1, room.z0], [room.x0, room.z1], [room.x1, room.z1]]) {
+          const sx = cx + Math.sign((room.x0 + room.x1) / 2 - cx) * 0.6, sz = cz + Math.sign((room.z0 + room.z1) / 2 - cz) * 0.6;
+          const gy = Phys.groundAt(sx, sz, room.y + 0.5); if (gy === -Infinity || Math.abs(gy - room.y) > 0.3) continue;
+          let blocked = false; for (const c of W.cols) if (c.on && sx > c.x0 - 0.35 && sx < c.x1 + 0.35 && sz > c.z0 - 0.35 && sz < c.z1 + 0.35 && c.y1 > gy + 0.2 && c.y0 < gy + 1.5) { blocked = true; break; }
+          if (blocked) continue;
+          const d = Math.hypot(sx - ex.pos.x, sz - ex.pos.z); if (d < bd) { bd = d; best = { spot: V3(sx, gy, sz), yaw: Math.atan2(cx - sx, cz - sz) }; }
+        }
+        if (!best) return null;
+        const s = new Scare('possessed', { room: room.name, pos: best.spot.clone().setY(best.spot.y + 1.6), intensity: 2.3 });
+        s.phase = 'possess'; s.data = { ex, askT: rr(5, 8) }; s.foci = [{ obj: ex.head, radius: 0.6 }];
+        ex.possess(best.spot, best.yaw);
+        return s;
+      }
       case 'shadow': {
         const cam = R.camera, fwd = cam.getWorldDirection(V3()); fwd.y = 0; fwd.normalize();
         let best = null, bs = -1;
@@ -3096,18 +3318,20 @@ const Director = {
           const sc = d * (0.5 + dot); if (sc > bs) { bs = sc; best = n; }
         }
         if (!best) return null;
-        const s = new Scare('shadow', { room: best.room, pos: V3(best.x, best.y, best.z), intensity: 1.6, cueSound: null }); s.foci = [{ obj: G_.shadow.focus, radius: 1.6 }]; return s;
+        const s = new Scare('shadow', { room: best.room, pos: V3(best.x, best.y, best.z), intensity: 1.8, cueSound: null }); s.foci = [{ obj: G_.shadow.focus, radius: 1.6 }]; return s;
       }
     }
     return null;
   },
   cue(s) {
     s.phase = 'cue'; s.pt = 0; s.cueT = G.t;
+    s.cueDur = s.type === 'piano' ? 1.6 : s.type === 'shadow' || s.type === 'follower' ? 0.2 : rr(1.2, 2.4);
     if (s.cueSound === 'pianoNote') { [57, 60, 64].forEach((m, i) => setTimeoutGame(i * 0.45, () => AudioSys.play('pianoNote', W.piano.focus.getWorldPosition(V3()), { m, v: 0.12 }))); bus.emit('noise', { pos: s.pos, loud: 1.1, kind: 'piano' }); }
-    else if (s.cueSound) AudioSys.play(s.cueSound, s.pos, { v: 0.9 });
-    HUD.ping(s.pos, 2.2); HUD.emf(0.5);
+    else { AudioSys.hush(s.cueDur + 0.4); if (s.cueSound && chance(0.5)) setTimeoutGame(s.cueDur * 0.5, () => AudioSys.play(s.cueSound, s.pos, { v: 0.5 })); }
+    HUD.emf(0.4);
   },
   runScare(s, dt) {
+    if (s.type === 'possessed') { this.runPossessed(s, dt); return; }
     const t = G.t, G_ = this.ghosts;
     s.t += dt; s.pt += dt;
     if (s.phase === 'lure') {
@@ -3125,11 +3349,11 @@ const Director = {
       return;
     }
     if (s.phase === 'cue') {
-      if (s.pt > (s.type === 'piano' ? 1.6 : s.type === 'shadow' ? 0 : 1.3)) { s.phase = 'active'; s.pt = 0; this.activate(s); }
+      if (s.pt > (s.cueDur ?? 1.3)) { s.phase = 'active'; s.pt = 0; this.activate(s); }
       return;
     }
     if (s.phase === 'active') {
-      const maxT = { doll: 52, wisp: 24, piano: 16, sheet: 20 }[s.type] || 14;
+      const maxT = { doll: 52, wisp: 24, piano: 16, sheet: 24, shadow: 30, follower: 18 }[s.type] || 14;
       if (this.step(s, dt) || s.pt > maxT) { s.phase = 'after'; s.pt = 0; this.stopVisuals(s); }
       return;
     }
@@ -3138,8 +3362,8 @@ const Director = {
   activate(s) {
     const G_ = this.ghosts;
     switch (s.type) {
-      case 'sheet': G_.sheet.float(s.data.a, s.data.b, rr(2.6, 3.6)); L_ghost(s, G_.sheet.group, 0x9fc0ff, 4); break;
-      case 'inface': G_.sheet.rush(R.camera); L_ghost(s, G_.sheet.group, 0xb0c8ff, 5); break;
+      case 'sheet': G_.sheet.float(s.data.a, s.data.b, rr(1.8, 2.6)); L_ghost(s, G_.sheet.focus, 0x8fa8d0, 2.5); break;
+      case 'inface': G_.sheet.rush(R.camera); L_ghost(s, G_.sheet.focus, 0x9fb0d0, 3); break;
       case 'portrait': s.data.p.glow = 0; AudioSys.play('whisper', s.pos, { v: 1.2 }); break;
       case 'chair': {
         const ch = s.data.ch; let tx = ch.x + rr(-2.5, 2.5), tz = ch.z + rr(-2, 2);
@@ -3153,7 +3377,8 @@ const Director = {
       case 'wisp': G_.wisp.start(s.data.pts); if (!Op.nv) HUD.hint('EMF SPIKE! Something invisible is here… try NIGHT VISION [F]', 4.5); HUD.emf(1); AudioSys.play('moan', s.pos, { dur: 3 }); break;
       case 'hands': G_.hands.start(s.data.win); L_ghost(s, G_.hands.focus, 0xb8c8ff, 5); break;
       case 'piano': W.piano.play_(1); L_ghost(s, W.piano.focus, 0x88aaff, 3); break;
-      case 'shadow': { const n = s.pos; G_.shadow.show(V3(n.x, n.y, n.z), Math.atan2(Op.pos.x - n.x, Op.pos.z - n.z)); AudioSys.play('heart', null, { v: 0.5 }); s.data.vanished = false; break; }
+      case 'shadow': { const n = s.pos; G_.shadow.show(V3(n.x, n.y, n.z), Math.atan2(Op.pos.x - n.x, Op.pos.z - n.z)); AudioSys.play('heart', null, { v: 0.5 }); s.data.done = false; break; }
+      case 'follower': { const p = this.behindPlayer(3.2); if (!p) { s.data.fail = true; break; } G_.watcher.show(p, Op.pos); AudioSys.play('breath', p.clone().setY(p.y + 1.7), { n: 1, v: 0.8 }); break; }
     }
   },
   /* One tick of an active scare. Returns true when finished. */
@@ -3161,6 +3386,7 @@ const Director = {
     const G_ = this.ghosts, t = G.t;
     switch (s.type) {
       case 'sheet': this.glitchNear(G_.sheet.group.position, 0.7); return !G_.sheet.active && G_.sheet.opacity < 0.05;
+      case 'follower': return this.stepFollower(s, dt);
       case 'inface': return !G_.sheet.active && s.pt > 0.3;
       case 'portrait': {
         const p = s.data.p, k = s.pt;
@@ -3184,23 +3410,99 @@ const Director = {
       case 'wisp': {
         const w = G_.wisp; if (Op.nv) this.glitchNear(w.group.position, 0.6); HUD.emf(clamp(1 - w.group.position.distanceTo(Op.pos) / 12, 0.2, 1));
         for (const src of W.sources) if (srcLit(src, t) && srcPos(src).distanceTo(w.group.position) < 2.2) { src.off.push([t, t + 9]); AudioSys.play('whoosh', srcPos(src), { dur: 0.4, v: 0.4 }); }
+        // stare at it through night vision for too long and it notices you
+        if (Op.nv && w.active && !w.lunge) {
+          const d = w.group.position.distanceTo(Op.pos), vis = Scoring.isVisible(s.foci[0].obj);
+          s.data.watch = vis && d < 8 ? (s.data.watch || 0) + dt : Math.min(s.data.watch || 0, 0);
+          if (s.data.watch > 1.4) { if (chance(0.65)) { w.startLunge(R.camera); AudioSys.play('whoosh', w.group.position, { dur: 0.5, v: 1.3 }); } else s.data.watch = -6; }
+        }
         return !w.active;
       }
       case 'hands': this.glitchNear(W.windows[s.data.win].pos, 0.5); return !G_.hands.active && s.pt > 0.8;
       case 'piano': if (W.piano.seq && W.piano.seq.t > W.piano.seq.end - 2.2) s.intensity = 2.2; return !W.piano.seq;
       case 'shadow': {
-        const sf = G_.shadow, vis = Scoring.isVisible(sf.focus);
-        if (!s.data.vanished) {
-          const d = Op.pos.distanceTo(sf.group.position);
-          if ((vis && R.camera.fov < 36 && s.pt > 0.8) || d < 6.5 || s.pt > 10) {
-            s.data.vanished = true; sf.vanish(); AudioSys.play('static', sf.group.position, { dur: 0.5, v: 1.5 }); G.glitchKick = 0.8;
-            if (vis && R.camera.fov < 36) { Scoring.bonus(s, 'VANISHED WHEN I ZOOMED 😰', 14000, 'vanish'); }
-          }
+        // the stalker: every time the lights flicker, it is closer
+        const sf = G_.shadow, D = s.data, vis = Scoring.isVisible(sf.focus), mp = sf.group.position, d = Op.pos.distanceTo(mp);
+        if (D.done) return sf.alpha < 0.02;
+        if (vis && R.camera.fov < 36 && s.pt > 0.8) { D.done = true; sf.vanish(); AudioSys.play('static', mp, { dur: 0.5, v: 1.5 }); G.glitchKick = 0.8; Scoring.bonus(s, 'IT VANISHED WHEN I ZOOMED', 14000, 'vanish'); return false; }
+        if (d < 2.4) { D.done = true; sf.vanish(); bus.emit('inface', { pos: mp.clone(), tex: TEX.face }); return false; }
+        D.flick = (D.flick === undefined ? rr(2.2, 3) : D.flick) - dt;
+        if (D.flick <= 0) {
+          D.flick = rr(1.8, 3.0); D.steps = (D.steps || 0) + 1;
+          G.flickerUntil = t + 0.5; G.flashOutUntil = t + 0.45; AudioSys.play('static', null, { dur: 0.3, v: 0.6 });
+          setTimeoutGame(0.2, () => {
+            if (!sf.active) return;
+            const from = sf.group.position.clone(), np = from.clone().lerp(Op.pos, rr(0.28, 0.4)), gy = Phys.groundAt(np.x, np.z, from.y + 0.6);
+            if (gy === -Infinity || Phys.blocked(from.clone().setY(from.y + 1.5), np.clone().setY(gy + 1.5))) return;
+            np.y = gy; sf.group.position.copy(np); sf.group.rotation.y = Math.atan2(Op.pos.x - np.x, Op.pos.z - np.z); AudioSys.play('step', np, { v: 3, heavy: true });
+          });
+          if (D.steps > 7) { D.done = true; sf.vanish(); }
         }
-        return s.data.vanished && sf.alpha < 0.02;
+        if (d > 36 || s.pt > 28) { D.done = true; sf.vanish(); }
+        return false;
       }
     }
     return true;
+  },
+  /* Something behind you, keeping pace. Footsteps in time with yours. It only moves while you don't look. */
+  stepFollower(s, dt) {
+    const w = this.ghosts.watcher, D = s.data;
+    if (D.fail) return true;
+    const vis = Scoring.isVisible(w.focus);
+    if (D.endT !== undefined) { D.endT -= dt; if (D.endT <= 0) { w.vanish(); return true; } return false; }
+    if (vis) {
+      D.seen = (D.seen || 0) + dt;
+      if (D.seen > 0.18) {
+        if (chance(0.35) && w.group.position.distanceTo(Op.pos) < 3.2) bus.emit('inface', { pos: w.group.position.clone(), tex: TEX.face });
+        else { AudioSys.play('sting', null, { v: 0.9 }); AudioSys.play('static', null, { dur: 0.3, v: 1.2 }); G.glitchKick = 1; Op.addTrauma(0.5); }
+        Scoring.bonus(s, 'IT WAS BEHIND ME', 12000, 'behind'); D.endT = 0.25;
+      }
+      return false;
+    }
+    const want = this.behindPlayer(lerp(3.2, 2.0, Math.min(1, s.pt / 12)));
+    if (want) { w.group.position.lerp(want, 1 - Math.exp(-3 * dt)); w.faceTo(Op.pos); }
+    D.stepAcc = (D.stepAcc || 0) + Math.hypot(Op.vel.x, Op.vel.z) * dt;
+    if (D.stepAcc > 1.45) { D.stepAcc = 0; const p = w.group.position.clone(); setTimeoutGame(0.14, () => AudioSys.play('step', p, { v: 1.3 })); }
+    D.breathT = (D.breathT === undefined ? 4 : D.breathT) - dt;
+    if (D.breathT <= 0) { D.breathT = rr(4, 7); AudioSys.play('breath', w.group.position.clone().setY(w.group.position.y + 1.7), { n: 1, v: 0.9 }); }
+    if (!D.chat && s.pt > 3) { D.chat = true; Chat.burst('behind'); }
+    if (s.pt > 16) { w.vanish(); return true; }
+    return false;
+  },
+  /* A standing spot behind the operator (out of frame, but in sight if they turn) */
+  behindPlayer(dist) {
+    const fwd = R.camera.getWorldDirection(V3()); fwd.y = 0; fwd.normalize();
+    for (let i = 0; i < 8; i++) {
+      const ang = Math.atan2(-fwd.x, -fwd.z) + (i ? rr(-0.6, 0.6) : 0), dd = dist * (i ? rr(0.8, 1.1) : 1);
+      const p = V3(Op.pos.x + Math.sin(ang) * dd, 0, Op.pos.z + Math.cos(ang) * dd), gy = Phys.groundAt(p.x, p.z, Op.pos.y + 0.6);
+      if (gy === -Infinity || Math.abs(gy - Op.pos.y) > 0.7) continue;
+      p.y = gy; if (Phys.blocked(R.camera.position, p.clone().setY(gy + 1.6))) continue;
+      return p;
+    }
+    return null;
+  },
+  /* A friend walks to a corner and stands facing the wall. Get close and they turn around. */
+  runPossessed(s, dt) {
+    s.t += dt; s.pt += dt; const D = s.data, ex = D.ex;
+    if (s.phase === 'possess') {
+      if (ex.escaped || (ex.state !== 'possessed' && !ex.controller.mode.startsWith('possessed'))) { s.phase = 'done'; return; }
+      if (ex.state !== 'possessed') { if (s.pt > 25) { ex.controller.mode = 'idle'; ex.stop(); s.phase = 'done'; } return; }
+      D.standT = (D.standT || 0) + dt;
+      if (!D.asked && D.standT > D.askT) {
+        D.asked = true; const o = Crew.list.find((e) => e !== ex && !e.escaped && !e.busy);
+        const nm = ex.name[0] + ex.name.slice(1).toLowerCase();
+        if (o) o.say(pick(LINES[o.id].missing).split('{X}').join(nm), 3);
+        AudioSys.play('whisper', ex.headPos(), { v: 0.5 });
+      }
+      const d = Op.pos.distanceTo(ex.pos), vis = Scoring.isVisible(ex.head);
+      D.seenT = vis ? (D.seenT || 0) + dt : 0;
+      if ((d < 3.4 && D.seenT > 0.5) || d < 1.8 || (D.standT > 40 && d < 7 && vis)) { s.phase = 'cue'; s.pt = 0; s.cueT = G.t; s.cueDur = rr(0.8, 1.5); AudioSys.hush(s.cueDur + 0.3); }
+      else if (D.standT > 55) { ex.setState('idle', 0); ex.controller.mode = 'idle'; ex.say('...where am I?', 2.5); s.phase = 'done'; }
+      return;
+    }
+    if (s.phase === 'cue') { if (s.pt > s.cueDur) { s.phase = 'active'; s.pt = 0; ex.reveal(); Op.addTrauma(0.8); G.glitchKick = 1; G.presenceKick = 1; G.flashOutUntil = G.t + 0.15; AudioSys.play('sting', null, { v: 1.1 }); } return; }
+    if (s.phase === 'active') { if (s.pt > 2.2) { s.phase = 'after'; s.pt = 0; } return; }
+    if (s.phase === 'after' && s.pt > 3) s.phase = 'done';
   },
   /* The doll teleports whenever you look away; each fresh sighting is a scare */
   stepDoll(s, dt) {
@@ -3244,6 +3546,8 @@ const Director = {
     if (s.type === 'hands') G_.hands.active = false;
     if (s.type === 'shadow') G_.shadow.vanish();
     if (s.type === 'portrait') { s.data.p.scream = 0; s.data.p.glow = 0; }
+    if (s.type === 'follower') G_.watcher.vanish();
+    if (s.type === 'possessed' && s.data.ex && (s.data.ex.state === 'possessed' || s.data.ex.controller.mode.startsWith('possessed'))) { s.data.ex.setState('idle', 0); s.data.ex.controller.mode = 'idle'; }
   },
   finish(s) {
     const G_ = this.ghosts;
@@ -3255,30 +3559,80 @@ const Director = {
   },
   later(dt, fn) { setTimeoutGame(dt, fn); },
   glitchNear(pos, amt) { const d = pos.distanceTo(Op.pos); G.glitchNear = Math.max(G.glitchNear, clamp(1 - d / 10, 0, 1) * amt); },
-  /* Non-scoring atmosphere */
-  ambient() {
-    const t = G.t, cam = R.camera, r = rnd();
-    const aroundPlayer = (dmin, dmax) => { const a = rr(0, TAU), d = rr(dmin, dmax); return V3(Op.pos.x + Math.sin(a) * d, Op.pos.y + rr(0.5, 2.5), Op.pos.z + Math.cos(a) * d); };
-    const agents = [Op.pos, ...Crew.list.map((e) => e.pos)];
-    if (r < 0.18) { const ds = W.doors.filter((d) => d.canSlam(agents) && d.center.distanceTo(Op.pos) < 18); if (ds.length) { pick(ds).slam(); return; } }
-    if (r < 0.3) { AudioSys.play('creak', aroundPlayer(4, 10)); return; }
-    if (r < 0.4) { const p = aroundPlayer(2, 4); AudioSys.play('whisper', p, { v: 0.7 }); HUD.ping(p, 1.2); return; }
-    if (r < 0.48 && Op.pos.y < 2) { AudioSys.play('footstepsAbove', V3(Op.pos.x + rr(-4, 4), 5.2, Op.pos.z + rr(-4, 4))); if (chance(0.4)) Crew.list[2].line('idle', 2); return; }
-    if (r < 0.56) { AudioSys.play('knock', aroundPlayer(3, 6)); return; }
-    if (r < 0.62) { AudioSys.play('clock', V3(-5.5, 2, 10)); return; }
-    if (r < 0.7 && W.rocker) { W.rocker.rock(); return; }
-    if (r < 0.8) { let best = null, bd = 7; for (const s of W.sources) { if (!srcLit(s, t) || s.flick !== 'candle') continue; const d = srcPos(s).distanceTo(Op.pos); if (d < bd) { bd = d; best = s; } } if (best) { best.off.push([t, t + rr(8, 16)]); AudioSys.play('whoosh', srcPos(best), { dur: 0.5, v: 0.6 }); return; } }
-    if (r < 0.88) { G.flickerUntil = t + rr(0.6, 1.4); AudioSys.play('static', null, { dur: 0.3, v: 0.5 }); return; }
-    if (Op.pos.distanceTo(W.dollHome) < 14) AudioSys.play('musicbox', W.dollHome); else AudioSys.play('moan', aroundPlayer(8, 14), { dur: 2 });
+  /* Dread: small, unexplained things between the scares */
+  dread() {
+    const t = G.t, late = clamp(t / G.bossT, 0, 1), agents = [Op.pos, ...Crew.list.map((e) => e.pos)];
+    const behind = (d) => this.behindPlayer(d) || Op.pos.clone();
+    this.spike = Math.max(this.spike, 0.45);
+    const opts = [
+      [2, () => { const p = behind(0.9); p.y = Op.pos.y + 1.65; AudioSys.play('breath', p, { n: 2, v: 1.1 }); if (chance(0.5)) setTimeoutGame(2.5, () => Chat.burst('behind')); }],
+      [2, () => { const p = behind(3.5); for (let i = 0; i < 4; i++) setTimeoutGame(i * 0.55, () => AudioSys.play('step', p, { v: 1.5 })); }],
+      [1.4, () => { const ds = W.doors.filter((d) => d.canSlam(agents) && d.center.distanceTo(Op.pos) < 18); if (ds.length) pick(ds).slam(); else AudioSys.play('knock', behind(4).setY(Op.pos.y + 1.5)); }],
+      [1.3 + late, () => this.lightsOut()],
+      [1.1 + late, () => { G.flashOutUntil = t + rr(1.4, 2.8); AudioSys.play('click'); G.presenceKick = 0.4; }],
+      [0.8 + late * 1.6, () => this.dropout()],
+      [1.2, () => this.mimic()],
+      [1, () => { const ns = W.nodes.filter((n) => n.on && !n.exit && n.room !== Nav.nearest(Op.pos).room); const n = pick(ns); AudioSys.play('cry', V3(n.x, n.y + 1.5, n.z), { v: 1.3 }); }],
+      [1, () => { const p = behind(rr(4, 7)); p.y = Op.pos.y + 1; AudioSys.play('childLaugh', p); }],
+      [0.9, () => AudioSys.play('knock', behind(rr(2, 4)).setY(Op.pos.y + 1.5))],
+      [1 + late, () => this.windowFigure()],
+      [Op.pos.y < 2 ? 0.8 : 0, () => AudioSys.play('footstepsAbove', V3(Op.pos.x + rr(-4, 4), 5.2, Op.pos.z + rr(-4, 4)))],
+      [0.5, () => AudioSys.play('clock', V3(-5.5, 2, 10))],
+      [W.rocker ? 0.6 : 0, () => W.rocker.rock()],
+      [0.5, () => AudioSys.play('musicbox', W.dollHome, { slow: true })],
+      [0.6, () => AudioSys.play('drag', V3(Op.pos.x, Op.pos.y + (Op.pos.y < 2 ? 4.8 : -4), Op.pos.z), { dur: 2 })]
+    ].filter((o) => o[0] > 0);
+    let tot = opts.reduce((a, o) => a + o[0], 0), r = rnd() * tot;
+    for (const [w, fn] of opts) { r -= w; if (r <= 0) { fn(); return; } }
+  },
+  /* Candles die one after another, the farthest first — the dark walks toward you */
+  lightsOut() {
+    const near = W.sources.filter((src) => srcLit(src, G.t) && src.flick === 'candle' && srcPos(src).distanceTo(Op.pos) < 14).sort((a, b) => srcPos(b).distanceTo(Op.pos) - srcPos(a).distanceTo(Op.pos));
+    if (!near.length) { G.flickerUntil = G.t + 1; return; }
+    near.slice(-5).forEach((src, i) => setTimeoutGame(i * 0.4, () => { src.off.push([G.t, G.t + rr(25, 45)]); AudioSys.play('whoosh', srcPos(src), { dur: 0.4, v: 0.5 }); }));
+  },
+  /* The tape drops out. When the picture comes back, someone is standing there. */
+  dropout() {
+    G.freezeT = rr(0.35, 0.7); AudioSys.hush(G.freezeT + 0.3);
+    if (!chance(0.55)) return;
+    setTimeoutGame(G.freezeT, () => {
+      const w = this.ghosts.watcher; if (w.active || (this.cur && this.cur.type === 'follower')) return;
+      const fwd = R.camera.getWorldDirection(V3()); fwd.y = 0; fwd.normalize();
+      const d = rr(4.5, 8), p = V3(Op.pos.x + fwd.x * d, 0, Op.pos.z + fwd.z * d), gy = Phys.groundAt(p.x, p.z, Op.pos.y + 0.6);
+      if (gy === -Infinity || Phys.blocked(R.camera.position, p.clone().setY(gy + 1.6))) return;
+      p.y = gy; w.show(p, Op.pos); G.presenceKick = 0.8;
+      setTimeoutGame(0.3, () => { w.vanish(); AudioSys.play('static', null, { dur: 0.25 }); G.glitchKick = 0.8; setTimeoutGame(1.5, () => Chat.burst('glimpse')); });
+    });
+  },
+  /* A friend's voice calls from another room… while they're standing right next to you */
+  mimic() {
+    const near = Crew.list.filter((e) => !e.escaped && !e.busy && e.pos.distanceTo(Op.pos) < 7);
+    if (!near.length) { AudioSys.play('whisper', (this.behindPlayer(1.2) || Op.pos.clone()).setY(Op.pos.y + 1.6), { v: 0.8 }); return; }
+    const who = pick(near), far = W.nodes.filter((n) => { if (!n.on || n.exit || n.stair) return false; const d = Math.hypot(n.x - Op.pos.x, n.z - Op.pos.z); return d > 9 && d < 22; });
+    if (!far.length) return;
+    const n = pick(far), p = V3(n.x, n.y + 1.6, n.z);
+    const line = pick(['Over here...', 'Come here. Bring the camera.', 'Help me... please...', 'I found something. Come look.', 'Why did you leave me down here?']);
+    AudioSys.play('voice', p, { pitch: who.def.pitch * 0.92, fs: who.def.fs, n: 7 });
+    HUD.caption(`<b style="color:${who.def.css}">${who.name}</b> <i>(${W.rooms[n.room].label.toLowerCase()})</i>: ${line}`, 3.2);
+    setTimeoutGame(3.6, () => { if (!who.busy && !who.escaped) { who.faceTarget = Op.pos.clone(); who.line('deny', 3); } });
+  },
+  /* Somebody is standing outside the window. You'll only see them in the lightning. */
+  windowFigure() {
+    const pr = Nav.nearest(Op.pos).room;
+    const ws = W.windows.map((w, i) => [w, i]).filter(([w]) => w.room === pr && !Phys.blocked(R.camera.position, w.pos));
+    if (!ws.length) { AudioSys.play('knock', (this.behindPlayer(3) || Op.pos.clone()).setY(Op.pos.y + 1.5)); return; }
+    const [, i] = pick(ws); this.ghosts.winFig.arm(i, G.t + 14); Weather.next = G.t + rr(1.5, 4);
+    setTimeoutGame(6, () => Chat.burst('window'));
   },
   /* ── BOSS: the Mansion Mother ── */
   startBoss() {
     const s = this.boss = new Scare('boss', { room: 'foyer', pos: W.mother.pos.clone(), intensity: 2.6, loud: true, persistent: true });
     s.phase = 'intro'; s.pt = 0; s.foci = [{ obj: W.mother.focus, radius: 1.2 }];
     G.boss = true; this.scares.push(s);
-    AudioSys.play('wail', W.mother.pos, { dur: 4 }); HUD.ping(W.mother.pos, 3);
-    HUD.objective('SOMETHING IS WRONG WITH THE LIGHTS…', true);
-    for (const e of Crew.list) { e.controller.mode = 'idle'; e.stop(); }
+    AudioSys.hush(3.2); setTimeoutGame(2.4, () => AudioSys.play('wail', W.mother.pos, { dur: 4 }));
+    for (const src of W.sources) if (src.flick !== 'fire') setTimeoutGame(rr(0, 2.8), () => { if (srcLit(src, G.t)) { src.off.push([G.t, 1e9]); AudioSys.play('whoosh', srcPos(src), { dur: 0.3, v: 0.3 }); } });
+    HUD.objective('THE CANDLES ARE GOING OUT…', true);
+    for (const e of Crew.list) { if (e.state === 'possessed' || e.state === 'reveal') e.setState('idle', 0); e.controller.mode = 'idle'; e.stop(); }
   },
   runBoss(s, dt) {
     const t = G.t, M = this.mother; s.t += dt; s.pt += dt;
@@ -3293,9 +3647,9 @@ const Director = {
         for (const n of W.nodes) { if (!n.on || n.exit) continue; const d = Nav.pathLen(here, n); if (d < 11 || d > 22) continue; const vis = !Phys.blocked(R.camera.position, V3(n.x, n.y + 2, n.z)); const sc = (vis ? 0 : 10) + rnd() * 3; if (sc > bs) { bs = sc; best = n; } }
         best = best || W.nodeById.f_nw;
         M.group.position.set(best.x, best.y, best.z); M.active = true; M.cool = 2; s.phase = 'active'; s.pt = 0; s.foci = [{ obj: M.headG, radius: 1.8 }];
-        AudioSys.play('roar', M.group.position, { dur: 3 }); HUD.ping(M.group.position, 3);
-        HUD.objective('RUN!!! SHE IS HUNTING YOU', true);
-        HUD.hint('Keep filming her — but don\'t let her catch you!', 4);
+        AudioSys.play('roar', M.group.position, { dur: 3 });
+        HUD.objective('SHE IS OUT OF THE PAINTING', true);
+        HUD.hint('Keep her in frame. She moves faster when you look away.', 5);
       }
       return;
     }
@@ -3323,13 +3677,19 @@ const Director = {
       while (M.path.length && Math.hypot(M.path[0].x - mp.x, M.path[0].z - mp.z) < 0.6) { if (Math.abs(M.path[0].y - mp.y) >= 1.5) { M.path = null; break; } M.path.shift(); }
       if (M.path && M.path.length) goal = V3(M.path[0].x, M.path[0].y, M.path[0].z);
     }
-    const to = V3(goal.x - mp.x, 0, goal.z - mp.z), dist = to.length(), speed = prey.op ? 2.75 : 3.1;
-    if (dist > 0.01) { to.normalize(); mp.x += to.x * Math.min(dist, speed * dt); mp.z += to.z * Math.min(dist, speed * dt); M.group.rotation.y = lerpAngle(M.group.rotation.y, Math.atan2(to.x, to.z), 1 - Math.exp(-6 * dt)); }
+    // watched: she lurches in jerky jumps. Unwatched: she comes quickly.
+    const seen = Scoring.isVisible(M.headG);
+    M.acc = (M.acc || 0) + dt; let mdt = dt;
+    if (seen) { if (M.acc < (M.jerk || 0.2)) mdt = 0; else { mdt = M.acc; M.acc = 0; M.jerk = rr(0.12, 0.32); } } else M.acc = 0;
+    const to = V3(goal.x - mp.x, 0, goal.z - mp.z), dist = to.length(), speed = (seen ? 1.8 : 4.0) * (prey.op ? 1 : 1.1);
+    if (dist > 0.01 && mdt > 0) { to.normalize(); mp.x += to.x * Math.min(dist, speed * mdt); mp.z += to.z * Math.min(dist, speed * mdt); M.group.rotation.y = lerpAngle(M.group.rotation.y, Math.atan2(to.x, to.z), 1 - Math.exp(-6 * Math.max(mdt, dt))); }
+    if ((M.breathT = (M.breathT === undefined ? 2 : M.breathT) - dt) <= 0) { M.breathT = rr(2.5, 4); AudioSys.play('breath', mp.clone().setY(mp.y + 3), { n: 1, v: 2 }); }
+    if ((M.snuffT = (M.snuffT || 0) - dt) <= 0) { M.snuffT = 0.5; for (const src of W.sources) if (srcLit(src, t) && srcPos(src).distanceTo(mp) < 4) src.off.push([t, t + 30]); }
     const gy = Phys.groundAt(mp.x, mp.z, mp.y + 0.8); mp.y = gy > -Infinity ? damp(mp.y, gy + 0.15 + Math.sin(t * 2) * 0.1, 8, dt) : damp(mp.y, goal.y, 4, dt);
     if (M.stepT === undefined || (M.stepT -= dt) <= 0) { M.stepT = 0.7; AudioSys.play('step', mp, { v: 3, heavy: true }); }
     if (pd < 1.5) {
       if (prey.op) {
-        Face.trigger(R.camera, 0.9); AudioSys.play('roar', mp, { dur: 1.5, v: 1.3 }); AudioSys.play('sting', null, { v: 1.3 }); Op.addTrauma(1); G.glitchKick = 1.2;
+        Face.trigger(R.camera, 0.75, TEX.faceMother); AudioSys.play('screech', null, { v: 1.3 }); AudioSys.play('roar', mp, { dur: 1.5, v: 1.1 }); Op.addTrauma(1); G.glitchKick = 1.4; G.presenceKick = 1;
         Op.battery = Math.max(1, Op.battery - 8); s.tags.add('caught'); bus.emit('caught');
         const far = W.nodes.filter((n) => n.on && !n.exit && Math.hypot(n.x - Op.pos.x, n.z - Op.pos.z) > 14 && Math.abs(n.y - Op.pos.y) < 5);
         const n = far.length ? pick(far) : W.nodeById.f_nw; M.group.position.set(n.x, n.y, n.z); M.cool = 3.5; M.path = null;
@@ -3369,7 +3729,7 @@ const Scoring = {
   bonus(s, label, amt, tag) {
     if (!s || s.tags.has(tag)) return; s.tags.add(tag);
     s.bonus += amt; this.views += amt; this.subs += amt * 0.02;
-    HUD.pop(label + ' +' + fmtViews(amt), tag === 'combo' ? 'combo' : 'big'); AudioSys.play('cash');
+    HUD.pop(label + ' +' + fmtViews(amt), tag === 'combo' ? 'combo' : 'big'); AudioSys.play('tick');
     Chat.burst(tag.startsWith('faint') ? 'faint' : tag === 'gary' ? 'gary' : tag === 'combo' ? 'combo' : tag === 'shaky' ? 'shaky' : tag === 'nv' ? 'nv' : tag === 'closeup' ? 'zoom' : 'ghost');
     if (tag === 'combo') this.stats.combos++; if (tag.startsWith('faint')) this.stats.faints++; if (tag === 'closeup') this.stats.closeups++; if (tag === 'nv') this.stats.nv++;
   },
@@ -3405,7 +3765,7 @@ const Scoring = {
       for (const e of reacting) {
         if (e.state === 'faint') { rate += 250; this.bonus(tgt, e.name + ' FAINTED ON CAMERA', 11000, 'faint' + e.id); }
         if (e.state === 'trip') this.bonus(tgt, 'FACEPLANT', 8000, 'trip' + e.id);
-        if (e.id === 'gary' && e.run && e.controller.mode === 'flee') this.bonus(tgt, 'GARY RUN 🏃', 5000, 'gary');
+        if (e.id === 'gary' && e.run && e.controller.mode === 'flee') this.bonus(tgt, 'GARY RAN', 5000, 'gary');
         if (tgt) tgt.bots[e.id] = (tgt.bots[e.id] || 0) + dt;
       }
       this.lastGhost = ghost; this.lastReact = reacting;
@@ -3416,14 +3776,14 @@ const Scoring = {
     if (tgt) {
       tgt.views += rate * dt;
       if (rate > tgt.peakRate) { tgt.peakRate = rate; tgt.peakT = G.t; tgt.peakFocus = ghost ? ghost.f.obj : (this.lastReact[0] && this.lastReact[0].head); }
-      if (!tgt.tags.has('clip') && tgt.views + tgt.bonus > 26000) { tgt.tags.add('clip'); HUD.pop('CLIP IT! ✂', 'big'); }
+      if (!tgt.tags.has('clip') && tgt.views + tgt.bonus > 26000) { tgt.tags.add('clip'); HUD.pop('● CLIP SAVED', 'big'); }
     }
     if (this.free && !s) { if (rate > 0) this.freeIdle = 0; else if ((this.freeIdle += dt) > 2.5) this.closeFree(); }
     if (s && this.free) this.closeFree();
     this.pending += rate * dt; this.popT -= dt;
-    if (this.popT <= 0) { this.popT = 0.8; if (this.pending >= 250) { HUD.pop('+' + fmtViews(this.pending) + ' VIEWS', this.pending > 8000 ? 'big' : ''); if (this.pending > 3000) AudioSys.play('pop'); } this.pending = 0; }
+    if (this.popT <= 0) { this.popT = 0.8; if (this.pending >= 250) HUD.pop('+' + fmtViews(this.pending) + ' VIEWS', this.pending > 8000 ? 'big' : ''); this.pending = 0; }
     this.viralT -= dt;
-    if (rate > 13000 && this.viralT <= 0) { this.viralT = 14; HUD.pop('GOING VIRAL 🔥', 'combo'); Chat.burst('viral'); }
+    if (rate > 13000 && this.viralT <= 0) { this.viralT = 14; HUD.pop('▲ TRENDING', 'combo'); Chat.burst('viral'); }
     this.rateSm = damp(this.rateSm, rate, 3, dt);
   },
   freeScare() {
@@ -3441,10 +3801,11 @@ const Scoring = {
   },
   endScare(s) {
     this.stats.scares++;
-    const missed = s.filmed < 0.3 && s.type !== 'boss';
+    const missed = s.filmed < (s.missAt ?? 0.3) && s.type !== 'boss';
     if (missed) {
       this.stats.missed++; this.lastMissT = G.t; HUD.pop('MISSED IT!', 'bad'); Chat.burst('missed');
-      const ex = Crew.list.filter((e) => !e.escaped && !e.busy); if (ex.length && chance(0.8)) { const e = pick(ex); setTimeoutGame(0.6, () => e.say(pick(['DID YOU GET THAT?!', 'Tell me you got that!', 'Camera guy?! Did you SEE that?!']), 2.5, true)); }
+      const ex = Crew.list.filter((e) => !e.escaped && !e.busy); if (ex.length && chance(0.8) && s.type !== 'follower') { const e = pick(ex); setTimeoutGame(0.6, () => e.say(pick(['Did you get that?!', 'Tell me you got that.', 'You didn\'t see it? It was RIGHT THERE.']), 2.5, true)); }
+      if (s.type === 'follower') setTimeoutGame(1, () => Chat.burst('behindMissed'));
     } else this.stats.filmed++;
     const m = this.moment(s, missed); if (missed) m.score = 1 + s.intensity; this.moments.push(m);
     this.stats.best = Math.max(this.stats.best, m.views);
@@ -3455,7 +3816,7 @@ const Scoring = {
 const USERS = ['xX_ghostboi_Xx', 'skeptic_steve', 'vhs_forever', 'ectoplasm_enjoyer', 'mom', 'priya_stan_acct', 'garyfanclub', 'NotAGhost', '1998kid', 'spooky_susan', 'chadlover99', 'dialup_dan', 'boo_bot', 'hauntedhank',
   'paranormal_pam', 'clickbait_carl', 'tape_rewinder', 'geocities_gwen', 'night_owl_77', 'Mothman_Official', 'ghostface_kilobyte', 'crypt_keeper_jr', 'tamagotchi_mom', 'y2k_prepper'];
 const COMMENTS = {
-  idle: ['first', 'is this live?', 'boring', 'fake', 'where are the ghosts', 'who is watching in 1999', 'hi mom', 'chad fanclub where u at', 'this house is so creepy', 'the wallpaper is scarier than any ghost', 'turn around', 'what was that in the corner??', 'lol gary', 'subscribed', 'priya is so smart', 'did anyone else hear that', 'my dad knows the guy who owns this place', 'camera quality is insane', 'is that a raccoon', 'go upstairs', 'check the basement!!', 'the doll. look at the doll.'],
+  idle: ['first', 'is this live?', 'fake', 'this house gives me a bad feeling', 'what was that in the corner??', 'did anyone else hear that', 'my dad says nobody lives there since 1961', 'go upstairs', 'check the basement', 'the doll. look at the doll.', 'why is the camera so dark', 'people went missing in this house', 'hollowell manor is REAL, look it up'],
   ghost: ['WHAT IS THAT', 'NO WAY', 'REAL??', '💀💀💀', 'bro I screamed', 'fake but I screamed', 'CGI', 'I SAW IT', 'THE GHOST', "nah I'm out", 'CLIP THAT', 'ok this is real', '😱😱😱', 'turn around turn around', 'GET CLOSER'],
   combo: ['LMAOOO THEIR FACES', 'THE SCREAM 😭', 'best episode ever', "I can't breathe 😂", 'THE TIMING', '💀💀💀💀', 'THEY SAW IT TOO', 'perfect shot cameraman'],
   faint: ['PRIYA DOWN', 'priya said it was the wind 💀', 'down goes the skeptic', 'someone check on priya', 'give priya an oscar', 'the faint was so dramatic 😭', 'peer reviewed that faint'],
@@ -3471,6 +3832,13 @@ const COMMENTS = {
   viral: ['THIS IS GOING VIRAL', 'trending #1', "omg we're famous", '🔥🔥🔥', 'my whole school is watching this', 'hi from the news'],
   inface: ['I FELL OUT OF MY CHAIR', 'JUMPSCARE 😭', 'bro dropped the camera', 'NOPE', 'my speakers 💀']
 };
+COMMENTS.behind = ['SOMEONE IS BEHIND YOU', 'turn around', 'TURN AROUND', 'who is that behind the cameraman', 'dont turn around', 'there are 5 people in this house', 'the cameraman has a follower', 'i can see it over the shoulder'];
+COMMENTS.behindMissed = ['it was RIGHT behind you the whole time', 'you never turned around', 'it followed you for like 15 seconds', 'we all saw it. you didnt.'];
+COMMENTS.window = ['DID ANYONE SEE THE WINDOW', 'someone was outside the window', 'lightning showed someone standing there', 'the window. look at the window'];
+COMMENTS.glimpse = ['WAIT what was that when the video cut', 'someone was standing there', 'pause at the glitch. PAUSE AT THE GLITCH', 'that was a person'];
+const CREEPY = ['why is it so quiet', 'is anyone else getting chills', 'something is in the doorway at the back', 'the portraits are looking at the camera', 'can you hear breathing in the mic', 'zoom into the dark corner', 'it moved', 'why are there 4 shadows', 'stop recording', 'the cameraman is not alone', 'there were 3 friends when this started right?', 'dont go upstairs', 'i paused and saw a face in the window'];
+const GLITCHED = ['let me in', 'you left the door open', 'i can see you', 'you should have left', 'she is in the walls', 'behind the door', 'OCT 31 1998 03:33', 'dont look away from her', 'its so cold down here', 'why did you leave us'];
+function zalgo(t, k) { const marks = ['\u0336', '\u0337', '\u0338', '\u0334', '\u0335', '\u0321', '\u0322', '\u0327', '\u0328', '\u0317', '\u0316']; return t.split('').map((c) => c + (Math.random() < k ? pick(marks) : '')).join(''); }
 const SUPERS = ['$4.99 GARY RUN', '$1.99 get priya a pillow', '$10.00 BUY MORE BATTERIES', '$2.00 chad is my hero', '$5.00 PLEASE LEAVE THE HOUSE', '$0.99 zoom in on the doll', '$20.00 hire a real cameraman'];
 const Chat = {
   reset() { this.t = 2; this.el = $('chat'); this.el.innerHTML = ''; this.log = []; },
@@ -3498,8 +3866,16 @@ const Chat = {
   fresh(list) { const recent = this.log.slice(-8).map((c) => c.text); const l = list.filter((x) => !recent.includes(x)); return pick(l.length ? l : list); },
   update(dt) {
     this.t -= dt; if (this.t > 0) return;
-    const ctx = this.context();
-    this.t = lerp(2.8, 0.35, clamp(Scoring.rateSm / 9000, 0, 1)) + rr(0, 0.9) + (ctx === 'idle' ? rr(0.5, 2) : 0);
+    let ctx = this.context();
+    const late = clamp(G.t / G.bossT, 0, 1);
+    this.t = lerp(4.5, 0.6, clamp(Scoring.rateSm / 9000, 0, 1)) + rr(0, 1.5) + (ctx === 'idle' ? rr(2, 5) : 0);
+    // the audience sees things the operator doesn't
+    const f = Director.cur;
+    if (f && f.type === 'follower' && f.phase === 'active' && !Scoring.lastGhost) ctx = 'behind';
+    if (ctx === 'idle' && chance(late * 0.7)) {
+      if (late > 0.55 && chance(0.4)) { const u = chance(0.5) ? zalgo('mother', 0.6) : chance(0.5) ? '????' : 'user_deleted'; this.push(zalgo(pick(GLITCHED), 0.25 + late * 0.3), false, u); return; }
+      this.push(this.fresh(CREEPY)); return;
+    }
     this.push(this.fresh(COMMENTS[ctx] || COMMENTS.idle));
   }
 };
@@ -3510,9 +3886,10 @@ const Chat = {
     0 t · 1-3 cam pos · 4-7 cam quat · 8 fov · 9 nv · 10 light · 11 dead · 12 trauma
     13 lightning · 14 view rate · 15 glitch · 16 battery · 17 lightDim · 18 flickerUntil
     19-21 ghost light pos · 22 ghost light intensity · 23-25 ghost light rgb · 26 views · 27 static
+    28 presence distortion · 29 flashlight flicker multiplier
    ════════════════════════════════════════════════════════════════════ */
 const Rec = {
-  HZ: 30, HEAD: 28, frames: null, size: 0, cap: 0, n: 0, acc: 0, events: [], on: false,
+  HZ: 30, HEAD: 30, frames: null, size: 0, cap: 0, n: 0, acc: 0, events: [], on: false,
   begin() {
     this.size = this.HEAD + W.entities.reduce((a, e) => a + e.recSize, 0);
     this.cap = this.HZ * 60 * 10;
@@ -3529,7 +3906,7 @@ const Rec = {
     a[o + 8] = cam.fov; a[o + 9] = Op.nv ? 1 : 0; a[o + 10] = Op.light ? 1 : 0; a[o + 11] = Op.dead ? 1 : 0; a[o + 12] = Op.trauma;
     a[o + 13] = Weather.flash; a[o + 14] = Scoring.rate; a[o + 15] = R.fx.glitch; a[o + 16] = Op.battery; a[o + 17] = G.lightDim; a[o + 18] = G.flickerUntil;
     if (gl) { const p = gl.obj.getWorldPosition(_v1); a[o + 19] = p.x; a[o + 20] = p.y; a[o + 21] = p.z; a[o + 22] = L.ghost.intensity; a[o + 23] = gl.color.r; a[o + 24] = gl.color.g; a[o + 25] = gl.color.b; } else a[o + 22] = 0;
-    a[o + 26] = Scoring.views; a[o + 27] = R.fx.stat;
+    a[o + 26] = Scoring.views; a[o + 27] = R.fx.stat; a[o + 28] = R.fx.presence; a[o + 29] = G.flashMul;
     let off = o + this.HEAD; for (const e of W.entities) { e.rec(a, off); off += e.recSize; }
     this.n++;
   },
@@ -3569,6 +3946,8 @@ const TITLES = {
   missed: ['I MISSED THE GHOST AGAIN (MY FRIENDS ARE MAD)', 'CAMERAMAN FAILS FOR 8 SECONDS (NOT CLICKBAIT)', 'WHAT DID THEY SEE?? (I WAS FILMING THE WALL)'],
   combo: ['GHOST ATTACKS {BOT} (NOT CLICKBAIT) (GONE WRONG)', '{BOT} SEES A REAL GHOST (REACTION) (EMOTIONAL)'],
   faint: ['{BOT} PASSES OUT ON CAMERA 😱 (DOCTORS ARE SHOCKED)', 'SKEPTIC FAINTS AFTER SEEING REAL GHOST (PROOF)'],
+  follower: ['SOMETHING FOLLOWED ME FOR 15 SECONDS (I DIDN\'T KNOW)', 'LOOK BEHIND ME AT 0:07 (NOT EDITED)'],
+  possessed: ['MY FRIEND GOT POSSESSED ON CAMERA (NOT CLICKBAIT)', '{BOT} TURNS AROUND... (DO NOT WATCH ALONE)'],
   nothing: ['3 HOURS OF NOTHING (NOT CLICKBAIT) (HONEST)']
 };
 function clipTitle(m) {
@@ -3656,8 +4035,8 @@ const Replay = {
     cam.fov = lerp(a[8], b[8], f); cam.updateProjectionMatrix(); cam.updateMatrixWorld();
     const nv = b[9] > 0.5;
     R.fx.nv = nv ? 1 : 0; R.fx.black = b[11] > 0.5 ? 1 : 0; R.fx.glitch = lerp(a[15], b[15], f); R.fx.stat = Math.max(R.fx.stat * 0.9, b[27]);
-    L.flash.intensity = b[10] > 0.5 && b[11] < 0.5 ? 55 : 0; L.nv.intensity = nv ? 2.2 : 0;
-    R.scene.fog.density = nv ? 0.028 : 0.05;
+    L.flash.intensity = b[10] > 0.5 && b[11] < 0.5 ? 48 * b[29] : 0; L.nv.intensity = nv ? 2.2 : 0;
+    R.scene.fog.density = nv ? 0.034 : 0.068; R.fx.presence = lerp(a[28], b[28], f);
     G.lightDim = b[17]; G.flickerUntil = b[18];
     applyLightning(lerp(a[13], b[13], f));
     if (b[22] > 0) { L.ghost.position.set(b[19], b[20], b[21]); L.ghost.color.setRGB(b[23], b[24], b[25]); L.ghost.intensity = b[22]; } else L.ghost.intensity = 0;
@@ -3782,20 +4161,23 @@ const HUD = {
   reset() { this.pings = []; this.emfV = 0; this.hintT = 0; this.objText = null; this.objAlert = false; $('popups').innerHTML = ''; $('hint').classList.remove('show'); this.lastTxt = {}; },
   pop(text, cls = '') {
     const d = document.createElement('div'); d.className = 'pop ' + cls; d.textContent = text;
-    d.style.top = (cls ? rr(30, 42) : rr(55, 66)) + 'vh'; d.style.marginLeft = rr(-12, 12) + 'vw';
+    this.popRow = ((this.popRow || 0) + 1) % 5; d.style.top = `calc(5vh + ${150 + this.popRow * 28}px)`;
     $('popups').appendChild(d); setTimeout(() => d.remove(), 1700);
   },
   ping(pos, dur = 1.5) { this.pings.push({ pos: pos.clone(), until: G.t + dur }); },
   emf(v) { this.emfV = Math.max(this.emfV, v); },
   hint(text, dur = 3) { $('hint').textContent = text; $('hint').classList.add('show'); this.hintT = dur; },
   objective(text, alert = false) { this.objText = text; this.objAlert = alert; },
+  caption(html, dur = 3) { this.capHTML = html; this.capUntil = G.t + dur; },
   update(dt) {
     const dead = Op.dead;
     this.recT += dt; $('rec').classList.toggle('off', this.recT % 1.2 > 0.8);
     for (const id of ['rec', 'playlbl', 'sp', 'modes', 'batt', 'emf', 'focus', 'zoombar', 'tc', 'date', 'crew', 'objective']) $(id).style.visibility = dead ? 'hidden' : '';
     if (this._dead !== dead) { this._dead = dead; document.querySelectorAll('#hud .corner').forEach((c) => c.style.visibility = dead ? 'hidden' : ''); }
     $('deadmsg').classList.toggle('hidden', !dead); if (dead) $('deadmsg').style.opacity = (G.t % 1.4 < 0.7) ? 1 : 0.2;
-    $('stream').style.opacity = dead ? 0 : 1; $('popups').style.opacity = dead ? 0 : 1;
+    // nothing gets between you and a jumpscare
+    const jump = !!(Face && Face.active);
+    $('stream').style.opacity = dead || jump ? 0 : 1; $('popups').style.opacity = dead || jump ? 0 : 1; $('bubbles').style.opacity = jump ? 0 : 1; $('subtitle').style.opacity = jump ? 0 : 1;
     this.set('tc', timecode(G.t));
     const mins = 23 * 60 + 58 + G.t * 0.44, hh = Math.floor(mins / 60) % 24, mm = Math.floor(mins % 60);
     const ampm = hh >= 12 ? 'PM' : 'AM', h12 = ((hh + 11) % 12) + 1;
@@ -3832,9 +4214,9 @@ const HUD = {
       const ang = Math.atan2(loc.x, -loc.z);
       if (Math.abs(ang) > 2.4) d = 1; else if (Math.abs(loc.y) > Math.abs(loc.x) * 1.4 && loc.z < 0) { if (loc.y > 0) u = 1; else d = 1; } else if (ang < 0) l = 1; else r = 1;
     }
-    const blink = G.t % 0.4 < 0.28 ? 1 : 0.35;
+    const blink = 0.8;
     $('edgeL').style.opacity = l * blink; $('edgeR').style.opacity = r * blink; $('edgeU').style.opacity = u * blink; $('edgeD').style.opacity = d * blink;
-    this.set('edgeD', '▼ BEHIND YOU ▼');
+
     // crew status
     const st = (ex) => ex.escaped ? 'ESCAPED 🚪' : ex.state === 'faint' ? 'FAINTED 💤' : ex.state === 'react' || ex.state === 'grabbed' ? 'SCREAMING 😱' : ex.state === 'trip' ? 'FACEPLANT 🤕' :
       ex.controller.mode === 'flee' ? 'FLEEING 🏃' : ex.controller.mode === 'hide' ? 'HIDING BEHIND YOU' : ex.controller.mode === 'investigate' || ex.controller.mode === 'look' ? 'INVESTIGATING 🔦' : ex.controller.mode === 'exit' ? 'RUNNING FOR THE DOOR' : 'EXPLORING';
@@ -3870,6 +4252,7 @@ function updateBubbles(now) {
   for (let i = 0; i < placed.length; i++) for (let j = 0; j < i; j++) { const a = placed[i], b = placed[j]; if (Math.abs(a.x - b.x) < 230 && a.y > b.y - b.h) a.y = b.y - b.h; }
   for (const p of placed) { p.el.style.left = p.x + 'px'; p.el.style.top = Math.max(40, p.y) + 'px'; }
   const s = $('subtitle');
+  if (G.mode === 'play' && HUD.capUntil > G.t) { s.classList.remove('hidden'); if (s._k !== HUD.capHTML) { s._k = HUD.capHTML; s.innerHTML = HUD.capHTML; } return; }
   if (sub) { s.classList.remove('hidden'); const k = sub.ex.name + sub.text; if (s._k !== k) { s._k = k; s.innerHTML = `<b style="color:${sub.ex.def.css}">${sub.ex.name}</b> <i>(off-screen)</i>: ${escapeHTML(sub.text)}`; } }
   else s.classList.add('hidden');
 }
@@ -3890,15 +4273,17 @@ const Menu = {
    ════════════════════════════════════════════════════════════════════ */
 const G = {
   mode: 'loading', t: 0, rt: 0, len: 480, bossT: 390, playing: false, boss: false, escape: false, lightDim: 1, flickerUntil: 0,
-  glitchKick: 0, glitchNear: 0, ghostLight: null, flashFx: 0, seed: 0, fresh: false, endReason: '', stopT: 0
+  glitchKick: 0, glitchNear: 0, ghostLight: null, flashFx: 0, seed: 0, fresh: false, endReason: '', stopT: 0,
+  flashOutUntil: 0, flashMul: 1, presence: 0, presenceKick: 0, freezeT: 0
 };
 let Face = null;
 function prepareNight(seed) {
   for (const e of Crew.list) e.controller.dispose();
   Crew.list = [];
   G.seed = seed; G.t = 0; G.boss = false; G.escape = false; G.lightDim = 1; G.flickerUntil = 0; G.glitchKick = 0; G.glitchNear = 0; G.ghostLight = null; G.playing = false;
+  G.flashOutUntil = 0; G.flashMul = 1; G.presence = 0; G.presenceKick = 0; G.freezeT = 0;
   buildWorld(seed);
-  Director.ghosts = { sheet: new SheetGhost(), wisp: new WispGhost(), shadow: new ShadowFigure(), hands: new WindowHands() };
+  Director.ghosts = { sheet: new PaleWoman(), wisp: new WispGhost(), shadow: new ShadowFigure(), hands: new WindowHands(), watcher: new Watcher(), winFig: new WindowFigure() };
   Director.doll = new Doll(); Director.mother = new Mother(); Face = new FaceJump();
   Crew.list = CREW_DEFS.map((d, i) => new Explorer(d, i, V3(-1.6 + i * 1.6, 0, 6.6 + (i === 1 ? -0.5 : 0))));
   Crew.list.forEach((e) => { e.rotY = Math.PI; e.applyPose(0); });
@@ -3999,20 +4384,21 @@ function frame(now) {
     else if (G.mode === 'title') updateTitle(dt);
     else if (G.mode === 'reel') { Replay.update(dt); updateBubbles(G.replayT); listener(); }
     else if (G.mode === 'paused') { R.fx.stat = 0.06; }
-    if (G.mode !== 'editor') R.render(G.rt);
+    if (G.mode !== 'editor' && !(G.mode === 'play' && G.freezeT > 0)) R.render(G.rt); // VHS dropout: hold the last frame
   } catch (err) { console.error(err); }
 }
 function listener() { const cam = R.camera; AudioSys.setListener(cam.position, cam.getWorldDirection(_v1), _v2.set(0, 1, 0).applyQuaternion(cam.quaternion)); }
 function updatePlay(dt) {
   G.t += dt;
   runTimers();
+  if (!G.boss) G.lightDim = lerp(1, 0.55, clamp(G.t / G.bossT, 0, 1)); // the house gets darker as the night goes on
   Op.update(dt, G.t);
   const cam = R.camera; cam.updateMatrixWorld();
   Director.update(dt);
   Crew.talkT -= dt; Crew.yellT -= dt;
   for (const ex of Crew.list) ex.update(dt, G.t);
   const gh = Director.ghosts;
-  gh.sheet.update(dt, G.t, cam); gh.wisp.update(dt, G.t, Op.nv); gh.shadow.update(dt, G.t); gh.hands.update(dt, G.t);
+  gh.sheet.update(dt, G.t, cam); gh.wisp.update(dt, G.t, Op.nv); gh.shadow.update(dt, G.t); gh.hands.update(dt, G.t); gh.watcher.update(dt, G.t); gh.winFig.update(G.t);
   Director.doll.update(dt, G.t, cam, true); Director.mother.update(dt, G.t); Face.update(dt, cam);
   const agents = [Op.pos, ...Crew.list.filter((e) => !e.escaped).map((e) => e.pos)];
   if (Director.mother.active) agents.push(Director.mother.group.position);
@@ -4038,7 +4424,13 @@ function updatePlay(dt) {
   R.fx.stat = Math.max(0, R.fx.stat - dt * 2.5, G.glitchKick * 0.3, Face.active ? 0.25 : 0);
   G.flashFx = Math.max(0, G.flashFx - dt * 3); R.fx.flash = G.flashFx;
   R.fx.warp = Op.trauma * 0.12;
-  R.scene.fog.density = Op.nv ? 0.028 : 0.05;
+  // "presence": the closer something is, the more the image bends and the light fails
+  let pres = G.presenceKick;
+  for (const f of Director.foci()) { if (f.nvOnly && !Op.nv) continue; const d = f.obj.getWorldPosition(_v1).distanceTo(cam.position); pres = Math.max(pres, clamp(1 - d / 10, 0, 1) * clamp(f.scare.intensity / 2, 0.5, 1.2)); }
+  G.presence = damp(G.presence, clamp(pres, 0, 1), 3, dt); G.presenceKick = Math.max(0, G.presenceKick - dt * 0.5);
+  R.fx.presence = G.presence * 0.85;
+  if (G.freezeT > 0) { G.freezeT -= dt; if (G.freezeT <= 0) { R.fx.stat = 0.8; AudioSys.play('static', null, { dur: 0.25, v: 1.2 }); } }
+  R.scene.fog.density = Op.nv ? 0.034 : 0.068;
   Rec.update(dt);
   listener();
   let fear = 0;
@@ -4047,7 +4439,7 @@ function updatePlay(dt) {
   if (Op.dead) fear = Math.max(fear, 0.5);
   if (G.boss) fear = Math.max(fear, 0.55);
   AudioSys.updateHeart(dt, fear);
-  HUD.update(dt); updateBubbles(G.t);
+  if (G.freezeT <= 0) { HUD.update(dt); updateBubbles(G.t); }
   if (G.t >= G.len) endNight('tape');
   else if (G.escape && Op.pos.z > 12.7) endNight('escaped');
 }
@@ -4073,7 +4465,7 @@ function updateTitle(dt) {
   updateFlames(t, cam); updateLightPool(t, cam.position, dt);
   applyLightning(updateWeather(dt, t, AudioSys.ready));
   L.flash.intensity = 0; L.nv.intensity = 0; L.ghost.intensity = 0;
-  R.fx.nv = 0; R.fx.black = 0; R.fx.flash = 0; R.fx.glitch = 0.12 + (vnoise(t * 0.8) > 0.75 ? 0.6 : 0); R.fx.stat = 0; R.fx.warp = 0;
+  R.fx.nv = 0; R.fx.black = 0; R.fx.flash = 0; R.fx.glitch = 0.12 + (vnoise(t * 0.8) > 0.75 ? 0.6 : 0); R.fx.stat = 0; R.fx.warp = 0; R.fx.presence = 0;
   listener();
 }
 
@@ -4094,13 +4486,18 @@ function boot() {
     if (i < steps.length) setTimeout(next, 16);
     else {
       bus.on('garyFled', (e) => { Director.garyRoom = e.room; });
-      bus.on('inface', () => { G.flashFx = 0.85; Op.addTrauma(1); G.glitchKick = 1.2; AudioSys.play('sting', null, { v: 1.2 }); AudioSys.play('scream', R.camera.position, { pitch: 700, v: 0.7, dur: 0.8, vowel: 'o', dist: 10 }); Chat.burst('inface'); }); toTitle(); requestAnimationFrame(frame); }
+      bus.on('inface', (e) => {
+        G.flashFx = 0.35; Op.addTrauma(1); G.glitchKick = 1.4; G.presenceKick = 1;
+        AudioSys.play('screech', null, { v: 1.2 }); Face.trigger(R.camera, 0.6, (e && e.tex) || TEX.face); Chat.burst('inface');
+      });
+      toTitle(); requestAnimationFrame(frame);
+    }
   };
   next();
 }
 boot();
 /* Console handle for tinkering and automated tests: window.HauntedCamcorder */
-window.HauntedCamcorder = { G, Op, Director, Scoring, Crew, Replay, Rec, Settings, R, startNight, endNight, prepareNight, world: () => W, step: (dt) => updatePlay(dt) };
+window.HauntedCamcorder = { G, Op, Director, Scoring, Crew, Replay, Rec, Settings, R, startNight, endNight, prepareNight, world: () => W, step: (dt) => updatePlay(dt), fire: (ev, data) => bus.emit(ev, data) };
 };
 </script>
 </body>
