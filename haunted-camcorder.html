@@ -40,6 +40,8 @@
   }
   canvas#c { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
   .layer { position: fixed; inset: 0; pointer-events: none; }
+  /* stacking: canvas < HUD < stream overlay < speech bubbles/popups < reel < menus */
+  #hud { z-index: 1; } #stream { z-index: 2; } #bubbles, #subtitle, #popups { z-index: 3; } #reel { z-index: 4; } .menu { z-index: 10; }
   .hidden { display: none !important; }
   .vhs-text {
     font-weight: bold; letter-spacing: 2px;
@@ -134,7 +136,7 @@
   .bubble::after { content: ""; position: absolute; left: 50%; bottom: -10px; transform: translateX(-50%); border: 8px solid transparent; border-top-color: #111; }
   .bubble .who { display: block; font-size: 10px; letter-spacing: 1px; opacity: .7; }
   .bubble.yell { background: #ffec6e; font-size: 18px; }
-  #subtitle { position: absolute; left: 50%; bottom: 13vh; transform: translateX(-50%); font-family: Arial, sans-serif; font-size: 17px; background: rgba(0,0,0,.65); padding: 5px 12px; color: #ffe46e; text-align: center; max-width: 70vw; }
+  #subtitle { position: absolute; left: 50%; bottom: 13vh; transform: translateX(-50%); font-family: Arial, sans-serif; font-size: 17px; background: rgba(0,0,0,.65); padding: 5px 12px; color: #ffe46e; text-align: center; max-width: 70vw; pointer-events: none; }
 
   /* ── Menus ─────────────────────────────────────────────── */
   .menu { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: auto; }
