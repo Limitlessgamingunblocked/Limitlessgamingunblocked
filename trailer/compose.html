@@ -168,7 +168,7 @@ function osd(t, o = {}) {
 /* ── the edit ── */
 // footage segments: [start, end, shot, firstFrame, opts]
 const SEG = [
-  [6.4, 9.6, 'foyer_push', 0, { osd: 'd97', tc0: 12 }],
+  [6.4, 9.6, 'foyer_push', 0, { osd: 'd97', tc0: 12, dim: 1.45 }],
   [11.4, 12.4, 'library_tape', 22, { osd: 'd97', tc0: 1210 }],
   [12.4, 13.4, 'pale_woman', 34, { osd: 'd97', tc0: 1893 }],
   [13.4, 14.4, 'doll', 36, { osd: 'd97', tc0: 2511, zoomTo: 1.08 }],
@@ -183,7 +183,7 @@ const SEG = [
   [31.1, 32.5, 'below_nv', 42, { osd: 'd33', tc0: 6242, nv: true }],
   [32.5, 33.9, 'stalker', 60, { osd: 'd33', tc0: 6590 }],
   [33.9, 35.3, 'danny_corner', 44, { osd: 'd33', tc0: 6911 }],
-  [35.3, 36.7, 'rose_found', 22, { osd: 'd33', tc0: 7303 }],
+  [35.3, 36.7, 'rose_found', 22, { osd: 'd33', tc0: 7303, zoomTo: 1.45 }],
   [41.6, 42.4, 'jump_mother', 0, { osd: null, shake: 60, zoomTo: 1.15 }]
 ];
 const STROBE = ['kept', 'lady', 'crawler', 'mother_chase', 'stalker', 'below_nv', 'danny_corner', 'rose_crib', 'gallery_mother', 'jump_kept', 'mother_glimpse', 'jump_rose', 'doll', 'lady', 'kept', 'jump_kept'];
@@ -259,7 +259,7 @@ async function renderFrame(i) {
   // ── 25.8–28.3: the door slams — PART TWO ──
   if (win(t, 25.8, 28.3)) {
     const slamT = 26.47; flash(Math.max(0, 1 - Math.abs(t - slamT) / 0.12) * 0.7);
-    if (t > 26.9) { text('PART TWO', W / 2, H / 2 - 90, { font: 'Plex', weight: 700, size: 34, track: 22, alpha: prog(t, 26.9, 27.2), split: 3 }); slam('NOBODY LEAVES.', W / 2, H / 2 + 10, 27.25, t, { size: 170, hold: 0.9, track: 10 }); }
+    if (t > 26.9) { text('PART TWO', W / 2, H / 2 - 150, { font: 'Plex', weight: 700, size: 34, track: 22, alpha: prog(t, 26.9, 27.2), split: 3 }); slam('NOBODY LEAVES.', W / 2, H / 2 + 10, 27.25, t, { size: 170, hold: 0.9, track: 10 }); }
   }
   // ── 36.7–39.9: strobe ──
   if (win(t, 36.7, 39.9)) {

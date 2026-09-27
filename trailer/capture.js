@@ -14,6 +14,11 @@ const [VW, VH] = (process.env.VIEW || '1920x1080').split('x').map(Number);
 (async () => {
   const browser = await chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--autoplay-policy=no-user-gesture-required'] });
   const page = await browser.newPage({ viewport: { width: VW, height: VH } });
+  if (process.env.DEBUG_HANG) { // kill -USR2 <pid> prints where the page's JS currently is
+    const cdp = await page.context().newCDPSession(page); await cdp.send('Debugger.enable');
+    cdp.on('Debugger.paused', (e) => { console.log('PAUSED', e.callFrames.slice(0, 12).map((f) => `${f.functionName || '(anon)'}:${f.location.lineNumber + 1}:${f.location.columnNumber}`).join(' < ')); cdp.send('Debugger.resume'); });
+    process.on('SIGUSR2', () => cdp.send('Debugger.pause'));
+  }
   page.on('pageerror', (e) => console.error('pageerror', e.message));
   if (THREE_JS) await page.route('**/three.min.js', (r) => r.fulfill({ path: THREE_JS, contentType: 'application/javascript' }));
   // no audio in capture: a headless AudioContext never advances, so every scheduled node and
@@ -30,6 +35,7 @@ const [VW, VH] = (process.env.VIEW || '1920x1080').split('x').map(Number);
     const H = window.HauntedCamcorder, S = H.Story;
     S.cardClick(); S.cardClick(); S.closeDoc(); S.closeDoc();
     H.G.mode = 'editor'; // stop the live loop: we drive every frame from here
+    window.requestAnimationFrame = () => 0; // and kill it outright, so no state change (a death, a card) can restart real-time rendering
     // nothing on the page needs to be composited; we read frames straight from the canvas
     for (const el of document.body.children) el.style.display = 'none';
     H.Director.next = 1e9; H.Director.dreadT = 1e9; S.ch = 99;
@@ -38,7 +44,7 @@ const [VW, VH] = (process.env.VIEW || '1920x1080').split('x').map(Number);
       H, V, dim: 1,
       place(x, y, z, eye) { H.Op.place(V(x, y, z), 0); if (eye) H.Op.eye = eye; },
       look(x, y, z) { const O = H.Op, dx = x - O.pos.x, dy = y - (O.pos.y + O.eye), dz = z - O.pos.z; O.yaw = Math.atan2(-dx, -dz); O.pitch = Math.atan2(dy, Math.hypot(dx, dz)); },
-      step(dt = 1 / 30) { H.Director.next = 1e9; H.Director.dreadT = 1e9; H.G.lightDim = this.dim; H.step(dt); },
+      step(dt = 1 / 30) { H.G.mode = 'editor'; H.Director.next = 1e9; H.Director.dreadT = 1e9; H.G.lightDim = this.dim; H.step(dt); },
       skip(sec) { for (let i = 0; i < Math.round(sec * 30); i++) this.step(); },
       prof: { step: 0, render: 0, read: 0, n: 0 },
       frame() {
@@ -107,7 +113,7 @@ void main(){
   shot('jump_rose', 24, `CAP.H.Op.fovT = 75; CAP.H.Op.fov = 75; CAP.H.fire('inface', { tex: CAP.H.Director.ghosts.rose.faceMat.map });`, ``);
   // ── PART TWO ──
   shot('door_slam', 75, `CAP.H.Director.ghosts.rose.hide(); CAP.dim = 1; CAP.skip(1); const S = CAP.H.Story; S.flags = {}; CAP.H.world().frontDoor.release(); CAP.skip(2.5); CAP.place(0, 0, 9.4); CAP.look(0, 1.8, 12.2); CAP.skip(0.3);`,
-    `if (i === 8) { CAP.H.Story.ch = 7; CAP.H.Story.partTwo(); CAP.H.Story.ch = 99; } CAP.look(0, 1.8, 12.2); CAP.dim = i > 8 ? 0.3 : 1;`);
+    `if (i === 20) { CAP.H.Story.ch = 7; CAP.H.Story.partTwo(); CAP.H.Story.ch = 99; const G = CAP.H.G; G.flashOutUntil = G.t + 0.3; G.flickerUntil = G.t + 1.4; } CAP.H.Op.light = true; CAP.look(0, 1.8, 12.2); CAP.dim = i > 20 ? 0.6 : 1;`);
   shot('kept', 132, `CAP.skip(5); CAP.H.Story.ch = 99; CAP.dim = 0.35; CAP.H.Hunt.stop(); const K = CAP.H.Director.ghosts.kept; const spots = [[-2.2, 0, 1.5, 0], [0.4, 0, -0.5, 4], [2.6, 0, 2.2, 1]]; K.forEach((k, j) => { if (spots[j]) k.place(CAP.V(spots[j][0], spots[j][1], spots[j][2]), 0, spots[j][3]); else k.hide(); }); CAP.place(0, 0, 9.5); CAP.look(0, 1.4, 1);`,
     `const K = CAP.H.Director.ghosts.kept, o = CAP.H.Op.pos; CAP.look(0, 1.4, 1); const beat = [34, 68, 100]; if (beat.includes(i)) CAP.H.G.flashOutUntil = CAP.H.G.t + 0.2; if (beat.map((b) => b + 5).includes(i)) { K.slice(0, 3).forEach((k, j) => { const p = k.group.position; p.x += (o.x - p.x) * (i > 100 ? 0.55 : 0.32); p.z += (o.z - p.z) * (i > 100 ? 0.55 : 0.32); k.newPose(); k.faceTo(o); }); }`);
   shot('lady', 96, `const K = CAP.H.Director.ghosts.kept; K.forEach((k) => k.hide()); CAP.dim = 0.3; const pw = CAP.H.Director.ghosts.sheet; window.LP = CAP.V(-15, 4.5, -10); pw.puppetTo(LP, Math.PI / 2, 0); CAP.place(-5.5, 4.5, -10.3); CAP.look(-15, 5.9, -10); CAP.H.Op.crouch = true; CAP.H.Op.eye = 1.05;`,
@@ -123,9 +129,15 @@ void main(){
   shot('jump_kept', 24, `CAP.H.Director.ghosts.rose.hide(); CAP.H.fire('inface', { tex: CAP.H.Director.ghosts.watcher.faceMat.map });`, ``);
 
   fs.mkdirSync(OUT, { recursive: true });
-  for (const s of shots) {
+  const last = ONLY ? Math.max(...shots.map((s, k) => ONLY.includes(s.name) ? k : -1)) : shots.length - 1;
+  for (const s of shots.slice(0, last + 1)) {
     await page.evaluate((code) => { new Function(code)(); }, s.setup);
-    if (ONLY && !ONLY.includes(s.name)) { await page.evaluate(([code, n]) => { for (let i = 0; i < n; i++) { if (code) new Function('i', code)(i); CAP.step(); CAP.H.G.rt += 1 / 30; } }, [s.each, s.frames]); continue; }
+    if (ONLY && !ONLY.includes(s.name)) {
+      console.log('skip', s.name, new Date().toTimeString().slice(0, 8));
+      // step through shots we don't need, in small batches so the page gets to breathe (GC, timers) between them.
+      for (let i0 = 0; i0 < s.frames; i0 += 10) await page.evaluate(([code, i0, n]) => { for (let i = i0; i < Math.min(n, i0 + 10); i++) { if (code) new Function('i', code)(i); CAP.step(); CAP.H.G.rt += 1 / 30; } }, [s.each, i0, s.frames]);
+      continue;
+    }
     const dir = path.join(OUT, s.name); fs.mkdirSync(dir, { recursive: true });
     const t0 = Date.now();
     for (let i = 0; i < s.frames; i++) {

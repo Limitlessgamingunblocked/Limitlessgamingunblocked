@@ -10,9 +10,15 @@ A 64-second motion-design trailer built entirely from the game itself.
    soundtrack into an MP4 via ffmpeg.
 
 ```sh
-node capture.js cap                     # ~30 min in software GL
+node capture.js cap                     # ~25 min in software GL
 node render.js cap haunted-camcorder-trailer.mp4
 ```
+
+`SHOTS=a,b,c` captures a subset (earlier shots are still simulated so the story state
+matches). Run one capture at a time: in software GL each new material set compiles
+shaders at several GB of memory, and parallel browsers mostly just fight over the CPU.
+
+The finished trailer is `haunted-camcorder-trailer.mp4` (1080p30, 64 s).
 
 Fonts (in `fonts/`): Anton, Special Elite, Cormorant Garamond, IBM Plex Mono —
 all under the SIL Open Font License.
