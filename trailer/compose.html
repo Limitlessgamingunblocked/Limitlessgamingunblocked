@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>HAUNTED CAMCORDER — trailer compositor</title>
+<!--
+  Trailer compositor. render.js loads this page, calls renderFrame(i) for every frame
+  (1920×1080 @ 30 fps) and renderAudio() once for the synthesized soundtrack, then
+  hands both to ffmpeg. Everything here is drawn procedurally on a 2D canvas on top
+  of in-engine footage captured by capture.js (cap/<shot>/0000.jpg …).
+-->
+<style>
+  @font-face { font-family: Anton; src: url(fonts/Anton.ttf); }
+  @font-face { font-family: Elite; src: url(fonts/SpecialElite.ttf); }
+  @font-face { font-family: Corm; src: url(fonts/CormorantItalic.ttf); font-style: italic; }
+  @font-face { font-family: Plex; src: url(fonts/PlexMono500.ttf); font-weight: 500; }
+  @font-face { font-family: Plex; src: url(fonts/PlexMono700.ttf); font-weight: 700; }
+  html, body { margin: 0; background: #000; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1920" height="1080"></canvas>
+<script>
+'use strict';
+const W = 1920, H = 1080, FPS = 30, DUR = 64, FRAMES = DUR * FPS;
+const URL_TEXT = 'hauntedcamcorder.netlify.app';
+const cv = document.getElementById('c'), ctx = cv.getContext('2d');
+const mk = (w = W, h = H) => { const c = document.createElement('canvas'); c.width = w; c.height = h; return c; };
+const A = mk(), B = mk(), C = mk(), T = mk();
+const a2 = A.getContext('2d'), b2 = B.getContext('2d'), c2 = C.getContext('2d'), t2 = T.getContext('2d');
+
+/* ── deterministic randomness (every render of a frame is identical) ── */
+function hash(n) { const s = Math.sin(n * 127.1 + 311.7) * 43758.5453; return s - Math.floor(s); }
+let _rs = 1; const rseed = (s) => { _rs = (s * 9301 + 49297) % 233280 || 1; }; const rnd = () => { _rs = (_rs * 9301 + 49297) % 233280; return _rs / 233280; };
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v)), lerp = (a, b, k) => a + (b - a) * k;
+const eOut = (k) => 1 - Math.pow(1 - clamp(k, 0, 1), 3), eIn = (k) => Math.pow(clamp(k, 0, 1), 3);
+const eBack = (k) => { k = clamp(k, 0, 1); const c1 = 1.70158, c3 = c1 + 1; return 1 + c3 * Math.pow(k - 1, 3) + c1 * Math.pow(k - 1, 2); };
+const win = (t, a, b) => t >= a && t < b;
+const prog = (t, a, b) => clamp((t - a) / (b - a), 0, 1);
+
+/* ── footage ── */
+const imgCache = new Map();
+function frameSrc(shot, f) { return `cap/${shot}/${String(Math.max(0, f | 0)).padStart(4, '0')}.jpg`; }
+function loadImg(src) {
+  if (imgCache.has(src)) return imgCache.get(src);
+  const p = new Promise((res) => { const im = new Image(); im.onload = () => res(im); im.onerror = () => res(null); im.src = src; });
+  imgCache.set(src, p);
+  if (imgCache.size > 160) imgCache.delete(imgCache.keys().next().value);
+  return p;
+}
+const SHOT_LEN = { foyer_push: 96, title_bg: 180, library_tape: 72, pale_woman: 84, doll: 72, gallery_hall: 60, gallery_mother: 66, crawler: 96, mother_glimpse: 90, mother_chase: 96, jump_mother: 26, rose_crib: 90, jump_rose: 24, door_slam: 75, kept: 132, lady: 96, below_nv: 96, stalker: 108, danny_corner: 90, rose_found: 72, jump_kept: 24 };
+
+/* ── prebuilt texture layers ── */
+const grain = []; for (let k = 0; k < 6; k++) { const g = mk(480, 270), gg = g.getContext('2d'), id = gg.createImageData(480, 270); for (let i = 0; i < id.data.length; i += 4) { const v = Math.random() * 255; id.data[i] = id.data[i + 1] = id.data[i + 2] = v; id.data[i + 3] = 255; } gg.putImageData(id, 0, 0); grain.push(g); }
+const scan = mk(W, H); { const s = scan.getContext('2d'); s.fillStyle = '#fff'; s.fillRect(0, 0, W, H); s.fillStyle = 'rgba(0,0,0,0.22)'; for (let y = 0; y < H; y += 4) s.fillRect(0, y, W, 2); }
+const vig = mk(W, H); { const v = vig.getContext('2d'), g = v.createRadialGradient(W / 2, H / 2, H * 0.3, W / 2, H / 2, H * 0.95); g.addColorStop(0, '#fff'); g.addColorStop(0.7, '#b8b8b8'); g.addColorStop(1, '#141414'); v.fillStyle = g; v.fillRect(0, 0, W, H); }
+const paper = mk(W, H); { const p = paper.getContext('2d'); p.fillStyle = '#ddd3b8'; p.fillRect(0, 0, W, H); const id = p.getImageData(0, 0, W, H); for (let i = 0; i < id.data.length; i += 4) { const n = (Math.random() - 0.5) * 22; id.data[i] += n; id.data[i + 1] += n; id.data[i + 2] += n * 0.8; } p.putImageData(id, 0, 0);
+  const g = p.createRadialGradient(W * 0.3, H * 0.2, 50, W * 0.5, H * 0.5, W * 0.8); g.addColorStop(0, 'rgba(255,250,235,.35)'); g.addColorStop(1, 'rgba(90,60,25,.35)'); p.fillStyle = g; p.fillRect(0, 0, W, H);
+  p.strokeStyle = 'rgba(120,90,50,.15)'; for (let i = 0; i < 40; i++) { p.lineWidth = Math.random() * 2; p.beginPath(); const x = Math.random() * W, y = Math.random() * H; p.moveTo(x, y); p.bezierCurveTo(x + 80, y + 30, x + 140, y - 20, x + 260, y + 10); p.stroke(); } }
+
+/* ── VHS treatment: chroma bleed, scanlines, grain, vignette, tracking, slice glitches ── */
+function vhsBlit(img, o = {}) {
+  const { bright = 1, shake = 0, zoom = 1, chroma = 3, t = 0, nv = false } = o;
+  a2.save(); a2.fillStyle = '#000'; a2.fillRect(0, 0, W, H);
+  const sx = (hash(t * 91.3) - 0.5) * shake, sy = (hash(t * 37.7) - 0.5) * shake;
+  const zw = W * zoom, zh = H * zoom;
+  a2.filter = bright !== 1 ? `brightness(${bright})` : 'none';
+  if (img) a2.drawImage(img, (W - zw) / 2 + sx, (H - zh) / 2 + sy, zw, zh);
+  a2.restore();
+  // chroma: G+B from the frame, R shifted
+  b2.globalCompositeOperation = 'copy'; b2.drawImage(A, 0, 0); b2.globalCompositeOperation = 'multiply'; b2.fillStyle = '#ff0000'; b2.fillRect(0, 0, W, H);
+  c2.globalCompositeOperation = 'copy'; c2.drawImage(A, 0, 0); c2.globalCompositeOperation = 'multiply'; c2.fillStyle = '#00ffff'; c2.fillRect(0, 0, W, H);
+  ctx.globalCompositeOperation = 'source-over'; ctx.drawImage(C, 0, 0); ctx.globalCompositeOperation = 'lighter'; ctx.drawImage(B, chroma, 0); ctx.globalCompositeOperation = 'source-over';
+}
+function finishVHS(t, o = {}) {
+  const { grainAmt = 0.14, glitch = 0, track = 0.35, scanAmt = 1, vigAmt = 1 } = o;
+  // scanlines + vignette
+  ctx.globalCompositeOperation = 'multiply';
+  if (scanAmt) { ctx.globalAlpha = scanAmt; ctx.drawImage(scan, 0, 0); }
+  if (vigAmt) { ctx.globalAlpha = vigAmt; ctx.drawImage(vig, 0, 0); }
+  ctx.globalAlpha = 1;
+  // grain
+  ctx.globalCompositeOperation = 'overlay'; ctx.globalAlpha = grainAmt;
+  const gi = grain[Math.floor(t * FPS) % grain.length]; ctx.drawImage(gi, 0, 0, W, H);
+  ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over';
+  // tracking band rolling down the frame
+  const by = ((t * 0.09 + 0.3) % 1.2 - 0.1) * H;
+  if (track > 0) { const g = ctx.createLinearGradient(0, by - 40, 0, by + 40); g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(0.5, `rgba(255,255,255,${0.05 * track})`); g.addColorStop(1, 'rgba(255,255,255,0)'); ctx.fillStyle = g; ctx.fillRect(0, by - 40, W, 80);
+    rseed(Math.floor(t * 30) + 7); for (let i = 0; i < 18; i++) { const y = by - 30 + rnd() * 60; ctx.fillStyle = `rgba(255,255,255,${rnd() * 0.25 * track})`; ctx.fillRect(rnd() * W, y, 40 + rnd() * 300, 2); } }
+  // slice glitch
+  if (glitch > 0.01) {
+    rseed(Math.floor(t * 30) * 13 + 3); const n = Math.floor(2 + glitch * 10);
+    for (let i = 0; i < n; i++) { const y = rnd() * H, h = 4 + rnd() * 60 * glitch, dx = (rnd() - 0.5) * 160 * glitch; ctx.drawImage(cv, 0, y, W, h, dx, y, W, h); }
+    if (glitch > 0.4) { ctx.globalCompositeOperation = 'lighter'; ctx.fillStyle = `rgba(255,0,60,${0.08 * glitch})`; ctx.fillRect(0, rnd() * H, W, 30 * glitch); ctx.globalCompositeOperation = 'source-over'; }
+  }
+}
+function staticFrame(t, amt = 1) {
+  const gi = grain[Math.floor(t * FPS * 3) % grain.length];
+  ctx.globalAlpha = amt; ctx.drawImage(gi, (hash(t) - 0.5) * 60, (hash(t + 3) - 0.5) * 60, W + 60, H + 60); ctx.globalAlpha = 1;
+  rseed(Math.floor(t * 30) + 99); for (let i = 0; i < 6; i++) { ctx.fillStyle = `rgba(0,0,0,${0.3 + rnd() * 0.4})`; ctx.fillRect(0, rnd() * H, W, 10 + rnd() * 60); }
+}
+function flash(a, col = '255,255,255') { if (a > 0.001) { ctx.fillStyle = `rgba(${col},${clamp(a, 0, 1)})`; ctx.fillRect(0, 0, W, H); } }
+function black() { ctx.globalCompositeOperation = 'source-over'; ctx.fillStyle = '#000'; ctx.fillRect(0, 0, W, H); }
+
+/* ── type ── */
+function text(str, x, y, o = {}) {
+  const { font = 'Anton', size = 120, weight = '', style = '', color = '#f2eee2', align = 'center', base = 'middle', alpha = 1, split = 0, track = 0, scale = 1, glow = 0, rot = 0 } = o;
+  ctx.save(); ctx.translate(x, y); ctx.rotate(rot); ctx.scale(scale, scale);
+  ctx.font = `${style} ${weight} ${size}px ${font}`; ctx.textAlign = align; ctx.textBaseline = base; ctx.letterSpacing = track + 'px';
+  if (split > 0.2) { ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = alpha * 0.85; ctx.fillStyle = '#ff1744'; ctx.fillText(str, -split, 0); ctx.fillStyle = '#00e5ff'; ctx.fillText(str, split, 0); ctx.globalCompositeOperation = 'source-over'; }
+  if (glow) { ctx.shadowColor = color; ctx.shadowBlur = glow; }
+  ctx.globalAlpha = alpha; ctx.fillStyle = color; ctx.fillText(str, 0, 0);
+  ctx.restore();
+}
+function measure(str, font, size, track = 0, weight = '', style = '') { ctx.save(); ctx.font = `${style} ${weight} ${size}px ${font}`; ctx.letterSpacing = track + 'px'; const w = ctx.measureText(str).width; ctx.restore(); return w; }
+/* Typewriter: characters appear at cps; a block cursor blinks after the last one */
+function typed(str, x, y, t0, t, o = {}) {
+  const { cps = 26, font = 'Elite', size = 46, color = '#e9e2cf', align = 'center', cursor = true, track = 1 } = o;
+  const n = clamp(Math.floor((t - t0) * cps), 0, str.length); if (t < t0) return 0;
+  const shown = str.slice(0, n), full = measure(str, font, size, track);
+  const left = align === 'center' ? x - full / 2 : x;
+  rseed(n * 7 + 1);
+  ctx.save(); ctx.font = `${size}px ${font}`; ctx.textAlign = 'left'; ctx.textBaseline = 'middle'; ctx.letterSpacing = track + 'px'; ctx.fillStyle = color;
+  ctx.shadowColor = 'rgba(255,40,70,.5)'; ctx.shadowOffsetX = -2; ctx.fillText(shown, left + (hash(t * 50) - 0.5) * 1.5, y);
+  ctx.shadowColor = 'rgba(0,210,255,.4)'; ctx.shadowOffsetX = 2; ctx.fillText(shown, left, y);
+  const cw = measure(shown, font, size, track);
+  if (cursor && (Math.floor(t * 2.4) % 2 === 0 || n < str.length)) { ctx.shadowColor = 'transparent'; ctx.fillRect(left + cw + 6, y - size * 0.45, size * 0.5, size * 0.9); }
+  ctx.restore(); return n;
+}
+/* Big kinetic slam: scale punch, RGB split decay, slice-glitch on the way in */
+function slam(str, x, y, t0, t, o = {}) {
+  if (t < t0) return; const k = t - t0, { size = 150, hold = 99, color = '#f2eee2', font = 'Anton', track = 4, out = 0.18 } = o;
+  const inK = eOut(k / 0.22), outK = k > hold ? prog(t, t0 + hold, t0 + hold + out) : 0;
+  const scale = lerp(1.35, 1, inK) * (1 + outK * 0.12), alpha = inK * (1 - outK), split = lerp(26, 3, eOut(k / 0.5)) + Math.sin(t * 40) * 1.2 + outK * 30;
+  // render to the text buffer so it can be sliced
+  t2.clearRect(0, 0, W, H);
+  const save = ctx; // draw using the same helper on the offscreen context
+  t2.save(); t2.translate(x, y); t2.scale(scale, scale); t2.font = `${size}px ${font}`; t2.textAlign = 'center'; t2.textBaseline = 'middle'; t2.letterSpacing = track + 'px';
+  t2.globalCompositeOperation = 'lighter'; t2.globalAlpha = alpha * 0.9; t2.fillStyle = '#ff1744'; t2.fillText(str, -split, 0); t2.fillStyle = '#00e5ff'; t2.fillText(str, split, 0);
+  t2.globalCompositeOperation = 'source-over'; t2.globalAlpha = alpha; t2.fillStyle = color; t2.fillText(str, 0, 0); t2.restore();
+  const g = k < 0.25 ? 1 - k / 0.25 : outK;
+  if (g > 0.02) { rseed(Math.floor(t * 30) * 5 + str.length); for (let i = 0; i < 9; i++) { const yy = y - size * 0.6 + rnd() * size * 1.2, hh = 6 + rnd() * 30, dx = (rnd() - 0.5) * 220 * g; save.drawImage(T, 0, yy, W, hh, dx, yy, W, hh); } }
+  save.drawImage(T, 0, 0);
+}
+/* Wrapping for long rule lines */
+function slamLines(lines, x, y, t0, t, o = {}) { const size = o.size || 110, gap = size * 1.02; lines.forEach((l, i) => slam(l, x, y + (i - (lines.length - 1) / 2) * gap, t0 + i * 0.08, t, o)); }
+
+/* ── camcorder on-screen display ── */
+function osd(t, o = {}) {
+  const { tc = t, date = 'PM 11:58\nOCT 31 1998', rec = true, label = 'PLAY ►', alpha = 1, battery = 3 } = o;
+  ctx.save(); ctx.globalAlpha = alpha; ctx.strokeStyle = 'rgba(244,241,232,.85)'; ctx.lineWidth = 4;
+  const m = 96, mt = 54, L = 90;
+  for (const [x, y, dx, dy] of [[m, mt, 1, 1], [W - m, mt, -1, 1], [m, H - mt, 1, -1], [W - m, H - mt, -1, -1]]) { ctx.beginPath(); ctx.moveTo(x, y + dy * L); ctx.lineTo(x, y); ctx.lineTo(x + dx * L, y); ctx.stroke(); }
+  const vt = (s, x, y, al = 'left', size = 34) => { ctx.font = `700 ${size}px Plex`; ctx.textAlign = al; ctx.textBaseline = 'top'; ctx.letterSpacing = '2px'; ctx.fillStyle = 'rgba(255,0,60,.55)'; ctx.fillText(s, x + 2, y); ctx.fillStyle = 'rgba(0,200,255,.45)'; ctx.fillText(s, x - 2, y); ctx.fillStyle = '#f4f1e8'; ctx.fillText(s, x, y); };
+  if (rec && Math.floor(t * 1.6) % 2 === 0) { ctx.fillStyle = '#ff2a2a'; ctx.beginPath(); ctx.arc(m + 40, mt + 42, 13, 0, 7); ctx.fill(); }
+  if (rec) vt('REC', m + 62, mt + 23);
+  vt(label, m + 190, mt + 23); vt('SP', m + 28, mt + 70, 'left', 26);
+  // battery
+  ctx.strokeStyle = '#f4f1e8'; ctx.lineWidth = 4; ctx.strokeRect(W - m - 118, mt + 26, 80, 34); ctx.fillStyle = '#f4f1e8'; ctx.fillRect(W - m - 36, mt + 35, 7, 16);
+  for (let i = 0; i < 4; i++) if (i < battery) ctx.fillRect(W - m - 113 + i * 19, mt + 31, 15, 24);
+  const f = Math.floor((tc % 1) * 30), s = Math.floor(tc) % 60, mi = Math.floor(tc / 60) % 60;
+  vt(`00:${String(mi).padStart(2, '0')}:${String(s).padStart(2, '0')}:${String(f).padStart(2, '0')}`, m + 28, H - mt - 70);
+  const [d1 = '', d2 = ''] = (date || '').split('\n'); if (d1) vt(d1, W - m - 28, H - mt - 108, 'right'); if (d2) vt(d2, W - m - 28, H - mt - 66, 'right');
+  ctx.restore();
+}
+
+/* ── the edit ── */
+// footage segments: [start, end, shot, firstFrame, opts]
+const SEG = [
+  [6.4, 9.6, 'foyer_push', 0, { osd: 'd97', tc0: 12 }],
+  [11.4, 12.4, 'library_tape', 22, { osd: 'd97', tc0: 1210 }],
+  [12.4, 13.4, 'pale_woman', 34, { osd: 'd97', tc0: 1893 }],
+  [13.4, 14.4, 'doll', 36, { osd: 'd97', tc0: 2511, zoomTo: 1.08 }],
+  [14.4, 15.4, 'gallery_hall', 16, { osd: 'd97', tc0: 3077 }],
+  [15.4, 17.4, 'gallery_mother', 6, { dim: 0.42, osd: null, zoomTo: 1.1 }],
+  [17.4, 19.4, 'crawler', 30, { osd: 'd98', tc0: 3521 }],
+  [19.4, 21.4, 'mother_glimpse', 30, { osd: 'd98', tc0: 4100 }],
+  [21.4, 23.4, 'mother_chase', 36, { osd: 'd98', tc0: 4907, shake: 14 }],
+  [25.8, 28.3, 'door_slam', 0, { osd: 'slam', tc0: 5566 }],
+  [28.3, 29.7, 'kept', 26, { osd: 'd33', tc0: 5731 }],
+  [29.7, 31.1, 'lady', 42, { osd: 'd33', tc0: 5998 }],
+  [31.1, 32.5, 'below_nv', 42, { osd: 'd33', tc0: 6242, nv: true }],
+  [32.5, 33.9, 'stalker', 60, { osd: 'd33', tc0: 6590 }],
+  [33.9, 35.3, 'danny_corner', 44, { osd: 'd33', tc0: 6911 }],
+  [35.3, 36.7, 'rose_found', 22, { osd: 'd33', tc0: 7303 }],
+  [41.6, 42.4, 'jump_mother', 0, { osd: null, shake: 60, zoomTo: 1.15 }]
+];
+const STROBE = ['kept', 'lady', 'crawler', 'mother_chase', 'stalker', 'below_nv', 'danny_corner', 'rose_crib', 'gallery_mother', 'jump_kept', 'mother_glimpse', 'jump_rose', 'doll', 'lady', 'kept', 'jump_kept'];
+const DATES = { d97: 'PM 11:58\nOCT 31 1997', d98: 'AM 12:47\nOCT 31 1998', d33: 'AM 3:33\nOCT 31 1997' };
+const RULES = [
+  [17.4, ['KEEP RECORDING.']], [19.4, ['DON\'T LOOK AWAY.']], [21.4, ['KEEP HER', 'IN FRAME.']],
+  [28.3, ['THEY MOVE WHEN', 'THE LIGHT IS OFF THEM.']], [29.7, ['SHE HUNTS BY SOUND.', 'DON\'T RUN.']], [31.1, ['IT ONLY SHOWS', 'IN THE GREEN.']],
+  [32.5, ['ZOOM IN.', 'IT HATES BEING SEEN.']], [33.9, ['DON\'T LOOK', 'AT HIS FACE.']], [35.3, ['SHE ONLY', 'WANTS TO PLAY.']]
+];
+// hard cuts that get a flash + static tick
+const CUTS = [6.4, 11.4, 12.4, 13.4, 14.4, 15.4, 17.4, 19.4, 21.4, 25.8, 28.3, 29.7, 31.1, 32.5, 33.9, 35.3, 36.7, 41.6, 43.2];
+
+async function drawSeg(t, seg) {
+  const [s, e, shot, f0, o] = seg, k = (t - s) / (e - s);
+  const f = Math.min(SHOT_LEN[shot] - 1, f0 + Math.floor((t - s) * FPS));
+  const img = await loadImg(frameSrc(shot, f));
+  const zoom = o.zoomTo ? lerp(1, o.zoomTo, k) : 1.02;
+  const cutK = CUTS.reduce((m, c) => Math.max(m, t >= c && t < c + 0.2 ? 1 - (t - c) / 0.2 : 0), 0);
+  vhsBlit(img, { bright: o.dim || 1, shake: (o.shake || 3) + cutK * 30, zoom, chroma: 3 + cutK * 16, t });
+  return cutK;
+}
+
+async function renderFrame(i) {
+  const t = i / FPS;
+  ctx.setTransform(1, 0, 0, 1, 0, 0); ctx.globalAlpha = 1; ctx.globalCompositeOperation = 'source-over'; ctx.filter = 'none';
+  black();
+  let glitch = 0, useVHS = false, osdO = null, cutK = 0;
+  const seg = SEG.find((s) => t >= s[0] && t < s[1]);
+  if (seg) { cutK = await drawSeg(t, seg); useVHS = true; glitch = cutK * 0.9; if (seg[4].osd) osdO = seg[4]; }
+
+  // ── 0–6.4: the tape starts ──
+  if (t < 6.4) {
+    const st = t < 0.7 ? 1 - t / 0.7 : 0; if (st > 0) staticFrame(t, st * 0.8);
+    osd(t, { rec: false, label: 'PLAY ►', date: '', alpha: t < 0.6 ? 0 : 1, battery: 4, tc: 0 });
+    if (t >= 0.9 && t < 2.6) { const a = prog(t, 0.9, 1.2) * (1 - prog(t, 2.3, 2.6)); ctx.globalAlpha = a; typed('HOLLOWELL — PLAY ME', W / 2, H / 2 - 10, 0.95, t, { size: 58, cps: 18, font: 'Elite', color: '#efe7d2' });
+      if (t > 2.0) { ctx.strokeStyle = '#c21a1a'; ctx.lineWidth = 5; ctx.beginPath(); const x0 = W / 2 + 250; ctx.moveTo(x0, H / 2 + 2); ctx.lineTo(x0 + 130 * prog(t, 2.0, 2.2), H / 2 - 4); ctx.stroke(); } ctx.globalAlpha = 1; }
+    if (t >= 2.6) {
+      typed('OCTOBER 31ST, 1997.', W / 2, H / 2 - 60, 2.75, t, { size: 52, cps: 22 });
+      typed('MY BROTHER WALKED INTO HOLLOWELL MANOR', W / 2, H / 2 + 20, 3.75, t, { size: 44, cps: 30, cursor: t < 5.4 });
+      typed('WITH A CAMCORDER.', W / 2, H / 2 + 84, 5.1, t, { size: 44, cps: 26 });
+    }
+    finishVHS(t, { grainAmt: 0.22, track: 0.8, glitch: t < 0.8 ? 0.6 : 0 });
+  }
+  // ── 6.4–9.6: the house ──
+  if (win(t, 6.4, 9.6)) {
+    slam('HE NEVER CAME OUT.', W / 2, H * 0.78, 7.7, t, { size: 118, hold: 1.7, track: 6 });
+  }
+  // ── 9.6–11.4: a tape in the mail ──
+  if (win(t, 9.6, 11.4)) {
+    if (t < 9.8) staticFrame(t, 1 - prog(t, 9.6, 9.8));
+    typed('ONE YEAR LATER,', W / 2, H / 2 - 40, 9.75, t, { size: 50, cps: 24 });
+    typed('HIS TAPE CAME IN THE MAIL.', W / 2, H / 2 + 36, 10.35, t, { size: 50, cps: 26 });
+    finishVHS(t, { grainAmt: 0.2, track: 0.6 });
+  }
+  // montage labels
+  const tapeLabels = [[11.4, 'TAPE 1 — LIBRARY'], [12.4, 'TAPE 2 — FOYER'], [13.4, 'TAPE 3 — NURSERY'], [14.4, 'TAPE 4 — PORTRAIT HALL']];
+  for (const [s, l] of tapeLabels) if (win(t, s, s + 1)) text(l, W / 2, H - 150, { font: 'Plex', weight: 700, size: 30, track: 8, alpha: 0.85, split: 2 });
+  // ── 15.4–17.4: the thesis ──
+  if (win(t, 15.4, 17.4)) { slam('THE HOUSE', W / 2, H / 2 - 80, 15.5, t, { size: 190, hold: 1.7, track: 10 }); slam('KEEPS EVERYONE.', W / 2, H / 2 + 110, 15.75, t, { size: 190, hold: 1.45, track: 10 }); }
+  // ── rules ──
+  for (const [s, lines] of RULES) if (win(t, s, s + (s < 23 ? 2 : 1.4))) {
+    const dur = s < 23 ? 2 : 1.4;
+    ctx.fillStyle = 'rgba(0,0,0,.35)'; ctx.fillRect(0, H * 0.62, W, H * 0.3);
+    slamLines(lines, W / 2, H * 0.77, s + 0.12, t, { size: lines.length > 1 ? 96 : 120, hold: dur - 0.32, track: 5 });
+  }
+  // ── 23.4–25.8: the whisper ──
+  if (win(t, 23.4, 25.8)) {
+    const a = prog(t, 23.9, 24.5) * (1 - prog(t, 25.3, 25.75));
+    text('...are you my brother?', W / 2, H / 2, { font: 'Corm', style: 'italic', size: 84, color: '#e7b2b2', alpha: a, track: 1, glow: 18 });
+    osd(t, { rec: true, label: '❚❚ PAUSE', date: 'AM 12:52\nOCT 31 1998', alpha: 0.5 });
+    finishVHS(t, { grainAmt: 0.18, track: 0.3 });
+  }
+  // ── 25.8–28.3: the door slams — PART TWO ──
+  if (win(t, 25.8, 28.3)) {
+    const slamT = 26.47; flash(Math.max(0, 1 - Math.abs(t - slamT) / 0.12) * 0.7);
+    if (t > 26.9) { text('PART TWO', W / 2, H / 2 - 90, { font: 'Plex', weight: 700, size: 34, track: 22, alpha: prog(t, 26.9, 27.2), split: 3 }); slam('NOBODY LEAVES.', W / 2, H / 2 + 10, 27.25, t, { size: 170, hold: 0.9, track: 10 }); }
+  }
+  // ── 36.7–39.9: strobe ──
+  if (win(t, 36.7, 39.9)) {
+    const k = prog(t, 36.7, 39.9), len = Math.max(2, Math.round(lerp(9, 2, k * k))), idx = Math.floor((t - 36.7) * FPS / len), shot = STROBE[idx % STROBE.length];
+    const f = Math.floor(hash(idx * 3.1) * (SHOT_LEN[shot] - 1));
+    const img = await loadImg(frameSrc(shot, f));
+    const on = ((t - 36.7) * FPS) % len;
+    if (on < 1 && hash(idx) > 0.55) { staticFrame(t, 1); } else vhsBlit(img, { shake: 20 + k * 60, zoom: 1.05 + k * 0.15, chroma: 6 + k * 24, t, bright: 1 + k * 0.4 });
+    useVHS = true; glitch = 0.3 + k * 0.8; flash(on < 1 && hash(idx + 5) > 0.7 ? 0.5 : 0);
+    if (t > 39.4) staticFrame(t, prog(t, 39.4, 39.9));
+    osdO = { osd: 'd33', tc0: 7500 + (t - 36.7) * 40 };
+  }
+  // ── 39.9–41.6: silence ──
+  if (win(t, 39.9, 41.6)) {
+    black(); if (Math.floor(t * 1.6) % 2 === 0) { ctx.fillStyle = '#ff2a2a'; ctx.beginPath(); ctx.arc(136, 96, 13, 0, 7); ctx.fill(); }
+    text('found you.', W / 2, H * 0.82, { font: 'Corm', style: 'italic', size: 44, color: '#e7b2b2', alpha: prog(t, 40.6, 40.8) * (1 - prog(t, 41.4, 41.6)) });
+    finishVHS(t, { grainAmt: 0.1, track: 0 });
+  }
+  // ── 41.6–42.4: jumpscare ──
+  if (win(t, 41.6, 42.4)) { flash(Math.max(0, 1 - (t - 41.6) / 0.1) * 0.8); glitch = 1.2; }
+  if (win(t, 42.4, 43.2)) { black(); staticFrame(t, 1 - prog(t, 42.9, 43.2) * 0.8); }
+  // ── 43.2–48.4: title ──
+  if (win(t, 43.2, 48.4)) {
+    const img = await loadImg(frameSrc('title_bg', Math.floor((t - 43.2) * FPS)));
+    vhsBlit(img, { bright: 0.38, t, zoom: 1.04 + (t - 43.2) * 0.01 }); useVHS = true;
+    logo(t, 43.2, W / 2, H / 2 - 40, 1);
+    if (t > 44.5) text('A FOUND-FOOTAGE HORROR GAME', W / 2, H / 2 + 190, { font: 'Plex', weight: 700, size: 34, track: 14, alpha: prog(t, 44.5, 45), split: 2 });
+    if (t > 45.7) text('11 CHAPTERS  ·  ONE TAPE  ·  NO WAY OUT', W / 2, H / 2 + 250, { font: 'Plex', weight: 500, size: 28, track: 8, alpha: prog(t, 45.7, 46.2) * 0.85, color: '#e7b2b2' });
+    glitch = t < 44 ? 1 - prog(t, 43.2, 44) : (hash(Math.floor(t * 6)) > 0.9 ? 0.4 : 0);
+  }
+  // ── 48.4–53.2: the case file ──
+  if (win(t, 48.4, 53.2)) { await caseFile(t); useVHS = false; }
+  // ── 53.2–64: play it ──
+  if (t >= 53.2) {
+    const img = await loadImg(frameSrc('title_bg', 150 + Math.floor(((t - 53.2) * FPS) % 30)));
+    vhsBlit(img, { bright: 0.22, t }); useVHS = true;
+    logo(t, 53.2, W / 2, 250, 0.52, true);
+    text('PLAY IT NOW, IN YOUR BROWSER', W / 2, 470, { font: 'Plex', weight: 700, size: 36, track: 12, alpha: prog(t, 53.6, 54), split: 2 });
+    // URL box
+    const bx = W / 2, by = 610, bw = measure(URL_TEXT, 'Plex', 66, 2) + 190, bh = 150, a = prog(t, 54, 54.3);
+    ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = '#f4f1e8'; ctx.lineWidth = 5; const L = 46;
+    for (const [x, y, dx, dy] of [[bx - bw / 2, by - bh / 2, 1, 1], [bx + bw / 2, by - bh / 2, -1, 1], [bx - bw / 2, by + bh / 2, 1, -1], [bx + bw / 2, by + bh / 2, -1, -1]]) { ctx.beginPath(); ctx.moveTo(x, y + dy * L); ctx.lineTo(x, y); ctx.lineTo(x + dx * L, y); ctx.stroke(); }
+    ctx.restore();
+    ctx.globalAlpha = a; typed(URL_TEXT, bx, by, 54.3, t, { font: 'Plex', size: 66, cps: 16, color: '#ffffff', track: 2 }); ctx.globalAlpha = 1;
+    if (t > 56.4) text('HEADPHONES ON  ·  LIGHTS OFF', W / 2, 790, { font: 'Plex', weight: 500, size: 30, track: 12, alpha: prog(t, 56.4, 56.9) * 0.9, color: '#e7b2b2' });
+    if (t > 57.6) text('YOUR BROTHER IS STILL IN THERE.', W / 2, 880, { font: 'Corm', style: 'italic', size: 52, alpha: prog(t, 57.6, 58.3) * 0.95, color: '#f2eee2' });
+    if (t >= 62) osdStop(t);
+    osd(t, { rec: t < 62, label: t < 62 ? 'PLAY ►' : '■ STOP', date: 'AM 3:33\nOCT 31 1997', tc: 7777 + Math.min(t, 62) });
+    glitch = hash(Math.floor(t * 5)) > 0.93 ? 0.35 : 0;
+  }
+
+  if (osdO && t < 43) { const d = osdO.osd === 'slam' ? (t > 26.55 ? DATES.d33 : 'AM 3:32\nOCT 31 1998') : DATES[osdO.osd]; osd(t, { date: d, tc: (osdO.tc0 || 0) + (t - (seg ? seg[0] : 0)) }); }
+  if (useVHS) finishVHS(t, { glitch, grainAmt: seg && seg[4].nv ? 0.24 : 0.15 });
+  if (t >= 62) { const k = prog(t, 62.6, 63.5); staticFrame(t, k * 0.9); flash(0); ctx.fillStyle = `rgba(0,0,0,${prog(t, 63.2, 63.9)})`; ctx.fillRect(0, 0, W, H); }
+  return cv.toDataURL('image/jpeg', 0.92);
+}
+function osdStop(t) {
+  ctx.fillStyle = `rgba(0,0,0,${0.35 + 0.2 * prog(t, 62, 62.3)})`; ctx.fillRect(0, 0, W, H);
+}
+/* The title, the way the game's own menu draws it: white, torn red/cyan edges, jittering */
+function logo(t, t0, x, y, sc, quiet) {
+  const k = t - t0, inK = quiet ? prog(t, t0, t0 + 0.6) : eOut(k / 0.5), jit = hash(Math.floor(t * 12)) > 0.86 ? 1 : 0;
+  const split = (quiet ? 5 : lerp(40, 6, eOut(k / 1.2))) + jit * 14;
+  const s = sc * (quiet ? 1 : lerp(1.25, 1, eOut(k / 0.6)));
+  t2.clearRect(0, 0, W, H);
+  t2.save(); t2.translate(x + jit * 8, y); t2.scale(s, s); t2.font = '250px Anton'; t2.textAlign = 'center'; t2.textBaseline = 'middle'; t2.letterSpacing = '14px';
+  for (const [str, dy] of [['HAUNTED', -125], ['CAMCORDER', 125]]) {
+    t2.globalCompositeOperation = 'lighter'; t2.globalAlpha = inK * 0.9; t2.fillStyle = '#ff1744'; t2.fillText(str, -split, dy); t2.fillStyle = '#00e5ff'; t2.fillText(str, split, dy);
+    t2.globalCompositeOperation = 'source-over'; t2.globalAlpha = inK; t2.shadowColor = 'rgba(255,255,255,.45)'; t2.shadowBlur = 40; t2.fillStyle = '#ffffff'; t2.fillText(str, 0, dy); t2.shadowBlur = 0;
+  }
+  t2.restore();
+  const g = quiet ? jit * 0.4 : clamp(1 - k / 0.8, 0, 1) + jit * 0.5;
+  ctx.drawImage(T, 0, 0);
+  if (g > 0.02) { rseed(Math.floor(t * 30) * 17); for (let i = 0; i < 12; i++) { const yy = y - 300 * sc + rnd() * 600 * sc, hh = 8 + rnd() * 40, dx = (rnd() - 0.5) * 260 * g; ctx.drawImage(T, 0, yy, W, hh, dx, yy, W, hh); } }
+}
+/* Hollowell County Sheriff's Department: exhibits pinned to the file */
+async function caseFile(t) {
+  const k = eOut(prog(t, 48.4, 49.0));
+  ctx.save(); ctx.translate(0, (1 - k) * H * 0.6); ctx.rotate((1 - k) * 0.06);
+  ctx.drawImage(paper, 0, 0);
+  ctx.fillStyle = '#1c1a16'; ctx.font = '700 40px Plex'; ctx.textAlign = 'left'; ctx.textBaseline = 'top'; ctx.letterSpacing = '4px';
+  ctx.fillText('HOLLOWELL COUNTY SHERIFF\'S DEPARTMENT', 110, 80);
+  ctx.font = '500 26px Plex'; ctx.letterSpacing = '3px'; ctx.fillText('EVIDENCE REVIEW · CASE #1031-98 · EXHIBIT 47-A', 110, 136);
+  ctx.fillRect(110, 186, W - 220, 4);
+  const pics = [[48.9, 'mother_glimpse', 86, 'EX. 47-A-3', -0.06, 300, 560], [49.3, 'kept', 112, 'EX. 47-A-9', 0.05, 850, 600], [49.7, 'rose_crib', 70, 'EX. 47-A-14', -0.03, 1400, 560]];
+  for (const [s, shot, f, lab, rot, px, py] of pics) {
+    if (t < s) continue; const pk = eBack(prog(t, s, s + 0.35)), img = await loadImg(frameSrc(shot, f));
+    ctx.save(); ctx.translate(px, py - (1 - pk) * 120); ctx.rotate(rot + (1 - pk) * 0.2); ctx.globalAlpha = clamp(pk * 1.5, 0, 1);
+    ctx.shadowColor = 'rgba(0,0,0,.5)'; ctx.shadowBlur = 30; ctx.shadowOffsetY = 12; ctx.fillStyle = '#f4f0e6'; ctx.fillRect(-250, -190, 500, 420); ctx.shadowColor = 'transparent';
+    ctx.filter = 'contrast(1.35) brightness(1.5) grayscale(.3)'; if (img) ctx.drawImage(img, 400, 150, 1120, 700, -226, -166, 452, 290); ctx.filter = 'none';
+    ctx.fillStyle = '#2a2016'; ctx.font = '32px Elite'; ctx.textAlign = 'center'; ctx.letterSpacing = '2px'; ctx.fillText(lab, 0, 150);
+    if (t > s + 0.5) { ctx.strokeStyle = '#c21a1a'; ctx.lineWidth = 5; ctx.beginPath(); ctx.ellipse(10, -30, 80, 95, 0.2, 0, Math.PI * 2 * eOut(prog(t, s + 0.5, s + 0.9))); ctx.stroke(); }
+    ctx.restore();
+  }
+  ctx.fillStyle = '#1c1a16'; ctx.font = '700 34px Plex'; ctx.textAlign = 'left'; ctx.letterSpacing = '4px';
+  if (t > 50.6) ctx.fillText('STATUS:  DANIEL R. — NOT FOUND', 110, 900);
+  if (t > 51.1) { ctx.font = 'italic 40px Corm'; ctx.letterSpacing = '0px'; ctx.fillText('"The sheriff says there\'s nothing on the tape. He\'s wrong."', 110, 965); }
+  if (t > 51.8) { const sk = eOut(prog(t, 51.8, 51.95)), s = lerp(2.4, 1, sk); ctx.save(); ctx.translate(1520, 900); ctx.rotate(0.14); ctx.scale(s, s); ctx.globalAlpha = sk * 0.85; ctx.strokeStyle = '#a01818'; ctx.lineWidth = 9; ctx.strokeRect(-190, -62, 380, 124); ctx.fillStyle = '#a01818'; ctx.font = '84px Anton'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.letterSpacing = '12px'; ctx.fillText('SEALED', 6, 4); ctx.restore(); }
+  ctx.restore();
+  // slight camera drift over the paper + grain
+  finishVHS(t, { grainAmt: 0.1, scanAmt: 0.25, track: 0, vigAmt: 0.8, glitch: t > 51.8 && t < 52 ? 0.4 : 0 });
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   SOUNDTRACK — synthesized offline and returned as 16-bit PCM WAV
+   ══════════════════════════════════════════════════════════════════ */
+async function renderAudio() {
+  const SR = 48000, ac = new OfflineAudioContext(2, SR * DUR, SR);
+  const master = ac.createGain(); master.gain.value = 0.9;
+  const comp = ac.createDynamicsCompressor(); comp.threshold.value = -14; comp.ratio.value = 6; comp.attack.value = 0.003; comp.release.value = 0.25;
+  master.connect(comp); comp.connect(ac.destination);
+  // reverb
+  const irLen = SR * 4, ir = ac.createBuffer(2, irLen, SR); for (let ch = 0; ch < 2; ch++) { const d = ir.getChannelData(ch); for (let i = 0; i < irLen; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / irLen, 3.2); }
+  const verb = ac.createConvolver(); verb.buffer = ir; const verbG = ac.createGain(); verbG.gain.value = 0.55; verb.connect(verbG); verbG.connect(master);
+  const noiseBuf = ac.createBuffer(1, SR * 3, SR); { const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1; }
+  const bus = (g = 1, wet = 0.3, pan = 0) => { const n = ac.createGain(); n.gain.value = g; const p = ac.createStereoPanner(); p.pan.value = pan; n.connect(p); p.connect(master); if (wet) { const s = ac.createGain(); s.gain.value = wet; n.connect(s); s.connect(verb); } return n; };
+  const env = (g, t, a, peak, hold, rel) => { g.gain.setValueAtTime(0, t); g.gain.linearRampToValueAtTime(peak, t + a); g.gain.setValueAtTime(peak, t + a + hold); g.gain.exponentialRampToValueAtTime(0.0001, t + a + hold + rel); };
+  const noise = (t, dur, dest, rate = 1) => { const s = ac.createBufferSource(); s.buffer = noiseBuf; s.loop = true; s.playbackRate.value = rate; s.connect(dest); s.start(t, Math.random() * 2); s.stop(t + dur); return s; };
+  const osc = (type, f, t, dur, dest) => { const o = ac.createOscillator(); o.type = type; o.frequency.value = f; o.connect(dest); o.start(t); o.stop(t + dur); return o; };
+  const filt = (type, f, q, dest) => { const b = ac.createBiquadFilter(); b.type = type; b.frequency.value = f; b.Q.value = q; b.connect(dest); return b; };
+  const shaper = (amt, dest) => { const ws = ac.createWaveShaper(), n = 1024, c = new Float32Array(n); for (let i = 0; i < n; i++) { const x = i / n * 2 - 1; c[i] = Math.tanh(x * amt); } ws.curve = c; ws.connect(dest); return ws; };
+
+  const hit = (t, v = 1, low = 55) => { // cinematic impact
+    const g = ac.createGain(); g.connect(bus(1, 0.45)); env(g, t, 0.004, v, 0.05, 1.8);
+    const o = osc('sine', low * 2, t, 2.2, g); o.frequency.exponentialRampToValueAtTime(low * 0.55, t + 0.9);
+    const n = ac.createGain(); n.connect(filt('lowpass', 1800, 0.7, g)); env(n, t, 0.001, 0.9 * v, 0.01, 0.35); noise(t, 0.5, n);
+    const b = ac.createGain(); b.connect(bus(0.5, 0.8)); env(b, t, 0.001, 0.5 * v, 0.02, 0.5); noise(t, 0.6, filt('bandpass', 380, 1.2, b), 0.6);
+  };
+  const braam = (t, v = 1, dur = 2) => {
+    const g = ac.createGain(); g.connect(bus(0.6, 0.5)); env(g, t, 0.02, v, dur * 0.3, dur);
+    const lp = filt('lowpass', 200, 3, shaper(2.2, g)); lp.frequency.setValueAtTime(180, t); lp.frequency.exponentialRampToValueAtTime(1600, t + 0.25); lp.frequency.exponentialRampToValueAtTime(260, t + dur);
+    for (const f of [55, 55.4, 82.4, 110, 110.7, 164.8]) osc('sawtooth', f, t, dur * 1.4, lp);
+  };
+  const whoosh = (t, dur = 0.8, v = 0.5, up = true) => { const g = ac.createGain(); g.connect(bus(1, 0.35)); env(g, t, dur * 0.8, v, 0, dur * 0.3); const bp = filt('bandpass', 400, 2.5, g); bp.frequency.setValueAtTime(up ? 250 : 3000, t); bp.frequency.exponentialRampToValueAtTime(up ? 3200 : 200, t + dur); noise(t, dur * 1.2, bp); };
+  const stat = (t, dur = 0.25, v = 0.35) => { const g = ac.createGain(); g.connect(bus(1, 0.05)); env(g, t, 0.002, v, dur, 0.05); noise(t, dur + 0.1, filt('highpass', 1200, 0.5, g), 1.4); };
+  const key = (t, v = 0.25) => { const g = ac.createGain(); g.connect(bus(1, 0.08, (Math.random() - 0.5) * 0.4)); env(g, t, 0.001, v, 0.004, 0.05); noise(t, 0.08, filt('bandpass', 2400 + Math.random() * 1200, 3, g)); const g2 = ac.createGain(); g2.connect(bus(1, 0.05)); env(g2, t + 0.012, 0.001, v * 0.5, 0.002, 0.08); osc('sine', 180, t, 0.1, g2); };
+  const typeRun = (t0, n, cps) => { for (let i = 0; i < n; i++) key(t0 + i / cps + (Math.random() - 0.5) * 0.01); };
+  const piano = (t, m, v = 0.3, dur = 2.4) => { const f = 440 * Math.pow(2, (m - 69) / 12), g = ac.createGain(); g.connect(bus(0.9, 0.7)); env(g, t, 0.004, v, 0.02, dur); [1, 2, 3, 4.01].forEach((h, i) => { const og = ac.createGain(); og.gain.value = [1, 0.4, 0.18, 0.08][i]; og.connect(g); osc(i ? 'sine' : 'triangle', f * h * (1 + (Math.random() - 0.5) * 0.004), t, dur + 0.3, og); }); };
+  const mbox = (t, m, v = 0.22) => { const f = 440 * Math.pow(2, (m - 69) / 12), g = ac.createGain(); g.connect(bus(0.8, 0.8, (Math.random() - 0.5) * 0.6)); env(g, t, 0.002, v, 0.01, 1.6); osc('sine', f, t, 2, g); const g2 = ac.createGain(); g2.gain.value = 0.25; g2.connect(g); osc('sine', f * 4.02, t, 0.6, g2); };
+  const heart = (t, v = 0.9) => { for (const [dt, a] of [[0, 1], [0.16, 0.65]]) { const g = ac.createGain(); g.connect(bus(1, 0.15)); env(g, t + dt, 0.005, v * a, 0.02, 0.22); const o = osc('sine', 62, t + dt, 0.35, g); o.frequency.exponentialRampToValueAtTime(38, t + dt + 0.2); } };
+  const whisper = (t, dur = 1.6, v = 0.35, pan = 0) => { const g = ac.createGain(); g.connect(bus(1, 0.5, pan)); env(g, t, 0.1, v, dur * 0.6, 0.4); const src = ac.createGain(); [900, 1900, 2800].forEach((f) => src.connect(filt('bandpass', f, 9, g))); noise(t, dur + 0.5, src, 0.9); const lfo = osc('sine', 9, t, dur + 0.5, ac.createGain()); const lg = ac.createGain(); lg.gain.value = 0.6; lfo.disconnect(); lfo.connect(lg); lg.connect(src.gain); };
+  const giggle = (t, v = 0.35) => { for (let i = 0; i < 6; i++) { const tt = t + i * 0.11, g = ac.createGain(); g.connect(bus(0.9, 0.6)); env(g, tt, 0.01, v * (1 - i * 0.1), 0.03, 0.06); const o = osc('triangle', 1100 - i * 40, tt, 0.12, g); o.frequency.linearRampToValueAtTime(1300 - i * 50, tt + 0.05); o.frequency.linearRampToValueAtTime(900, tt + 0.1); } };
+  const chime = (t, v = 0.35) => { const g = ac.createGain(); g.connect(bus(0.8, 0.9)); env(g, t, 0.003, v, 0.02, 4); [[196, 1], [196 * 2.76, 0.45], [196 * 5.4, 0.2], [196 * 2, 0.35]].forEach(([f, a]) => { const og = ac.createGain(); og.gain.value = a; og.connect(g); osc('sine', f, t, 4.5, og); }); };
+  const slamS = (t) => { hit(t, 1.2, 48); const g = ac.createGain(); g.connect(bus(1, 0.6)); env(g, t, 0.001, 0.9, 0.02, 0.4); noise(t, 0.5, filt('lowpass', 900, 1, g)); for (let i = 0; i < 5; i++) { const tt = t + 0.05 + i * 0.045, g2 = ac.createGain(); g2.connect(bus(0.6, 0.4)); env(g2, tt, 0.001, 0.4, 0.002, 0.05); noise(tt, 0.08, filt('bandpass', 1800, 4, g2)); } };
+  const screech = (t, dur = 0.8) => { const g = ac.createGain(); g.connect(bus(0.8, 0.35)); env(g, t, 0.005, 0.9, dur * 0.7, 0.3); const sh = shaper(6, filt('bandpass', 2200, 0.8, g)); for (const f of [880, 932, 1245, 1397]) { const o = osc('sawtooth', f, t, dur + 0.4, sh); o.frequency.linearRampToValueAtTime(f * 1.3, t + dur); const l = ac.createOscillator(); l.frequency.value = 23; const lg = ac.createGain(); lg.gain.value = 40; l.connect(lg); lg.connect(o.frequency); l.start(t); l.stop(t + dur + 0.4); } noise(t, dur + 0.4, sh, 1.2); };
+  const skitter = (t, n = 14, v = 0.35) => { for (let i = 0; i < n; i++) { const tt = t + i * (0.03 + Math.random() * 0.04), g = ac.createGain(); g.connect(bus(0.7, 0.3, (Math.random() - 0.5) * 0.8)); env(g, tt, 0.001, v, 0.004, 0.03); noise(tt, 0.05, filt('bandpass', 700 + Math.random() * 1100, 4, g)); } };
+  const tongue = (t, n = 3, v = 0.5) => { for (let i = 0; i < n; i++) { const tt = t + i * 0.12, g = ac.createGain(); g.connect(bus(0.8, 0.5, 0.3)); env(g, tt, 0.001, v, 0.004, 0.03); noise(tt, 0.05, filt('bandpass', 2600, 7, g)); } };
+  const riser = (t, dur) => { const g = ac.createGain(); g.connect(bus(0.7, 0.4)); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.8, t + dur); g.gain.setValueAtTime(0, t + dur + 0.01); const bp = filt('bandpass', 300, 1.5, g); bp.frequency.setValueAtTime(300, t); bp.frequency.exponentialRampToValueAtTime(6000, t + dur); noise(t, dur, bp); const o = osc('sawtooth', 80, t, dur, filt('lowpass', 1400, 1, g)); o.frequency.exponentialRampToValueAtTime(640, t + dur); for (let i = 0; i < 40; i++) { const tt = t + dur * (1 - Math.pow(1 - i / 40, 0.5)); stat(tt, 0.02, 0.15 + i * 0.006); } };
+  const drone = (t0, t1, v = 0.18, root = 55) => { const g = ac.createGain(); g.connect(bus(0.9, 0.5)); g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(v, t0 + 2); g.gain.setValueAtTime(v, t1 - 0.6); g.gain.exponentialRampToValueAtTime(0.0001, t1); const lp = filt('lowpass', 320, 2, g); const lfo = osc('sine', 0.13, t0, t1 - t0, ac.createGain()); const lg = ac.createGain(); lg.gain.value = 140; lfo.disconnect(); lfo.connect(lg); lg.connect(lp.frequency); for (const f of [root, root * 1.006, root * 1.498, root * 2.01, root * 2.378]) osc('sawtooth', f, t0, t1 - t0, lp); };
+  const pulse = (t0, t1, bpm, note = 41) => { const step = 60 / bpm / 2; for (let t = t0, i = 0; t < t1; t += step, i++) { const f = 440 * Math.pow(2, (note - 69) / 12) * (i % 8 === 6 ? 1.189 : 1), g = ac.createGain(); g.connect(bus(0.9, 0.12)); env(g, t, 0.003, i % 2 ? 0.35 : 0.5, 0.02, step * 0.8); osc('sawtooth', f, t, step, filt('lowpass', 520 + (i % 4) * 90, 5, shaper(1.6, g))); } };
+
+  // ── cue sheet (seconds match the picture edit above) ──
+  // tape in, motor, static
+  stat(0, 0.7, 0.5); hit(0.05, 0.35, 90); { const g = ac.createGain(); g.connect(bus(0.4, 0.1)); env(g, 0.2, 0.2, 0.12, 2, 0.4); osc('sawtooth', 58, 0.2, 3, filt('lowpass', 300, 2, g)); }
+  typeRun(0.95, 18, 18);
+  typeRun(2.75, 19, 22); typeRun(3.75, 38, 30); typeRun(5.1, 17, 26);
+  drone(2.6, 23.6, 0.16, 55);
+  hit(6.4, 0.7); whoosh(5.6, 0.8, 0.35);
+  braam(7.7, 0.8, 2.2);
+  stat(9.6, 0.2, 0.5); typeRun(9.75, 15, 24); typeRun(10.35, 26, 26);
+  // the piano from the house, slow and out of tune
+  const mel = [57, 60, 64, 69, 68, 64, 60, 57, 56, 59, 62, 65, 64, 62, 59, 56];
+  mel.forEach((m, i) => piano(9.8 + i * 0.47, m + (i % 5 === 4 ? 0.3 : 0), 0.2 + (i % 4 === 0 ? 0.08 : 0)));
+  for (const c of [11.4, 12.4, 13.4, 14.4]) { hit(c, 0.45, 70); stat(c, 0.08, 0.4); }
+  giggle(13.7, 0.25); whoosh(14.5, 0.9, 0.5, true);
+  hit(15.4, 1.2, 45); braam(15.5, 1, 2.4); braam(15.75, 0.6, 2.2); screech(15.9, 0.6);
+  for (const [c, fx] of [[17.4, () => skitter(18.1, 20, 0.4)], [19.4, () => whisper(19.7, 1.4, 0.3)], [21.4, () => { heart(21.6); heart(22.1); heart(22.5); heart(22.85); }]]) { hit(c, 0.95, 50); braam(c + 0.12, 0.75, 1.8); fx(); whoosh(c - 0.7, 0.7, 0.4); }
+  // 23.4: everything stops but the heart
+  heart(23.6, 1); heart(24.35, 1); heart(25.05, 1.05); whisper(24.0, 1.6, 0.45, -0.3); giggle(25.2, 0.12);
+  // 25.8: door, clock, PART TWO
+  whoosh(25.2, 0.6, 0.3); slamS(26.47); stat(26.5, 0.15, 0.4);
+  chime(26.9); chime(27.45); chime(28.0);
+  braam(27.25, 1, 2.5); hit(27.25, 1, 42);
+  drone(27.3, 36.8, 0.14, 49);
+  pulse(28.3, 36.7, 128, 37);
+  [28.3, 29.7, 31.1, 32.5, 33.9, 35.3].forEach((c, i) => { hit(c, 0.9, 52); stat(c, 0.06, 0.4); if (i === 0) { for (const b of [29.17, 29.33]) hit(b, 0.5, 90); } });
+  tongue(30.1, 4); tongue(30.8, 3); screech(30.75, 0.35);
+  skitter(31.4, 18, 0.45); { const g = ac.createGain(); g.connect(bus(0.4, 0.2)); env(g, 31.1, 0.1, 0.04, 1.2, 0.2); osc('sine', 7800, 31.1, 1.4, g); }
+  for (const s of [33.0, 33.5]) { stat(s, 0.12, 0.5); hit(s, 0.5, 80); }
+  { const tt = 33.9 + 32 / 30; hit(tt, 1.1, 46); screech(tt, 0.35); }
+  giggle(36.0, 0.4);
+  riser(36.7, 3.2);
+  for (let i = 0; i < 24; i++) { const tt = 36.7 + 3.2 * (1 - Math.pow(1 - i / 24, 1.6)); hit(tt, 0.35 + i * 0.02, 60 + (i % 3) * 20); }
+  // 39.9: silence. Then she finds you.
+  whisper(40.55, 0.9, 0.35, 0.5);
+  hit(41.6, 1.4, 40); screech(41.6, 0.8); stat(41.6, 0.8, 0.6); braam(41.62, 1, 1.6);
+  stat(42.4, 0.8, 0.35);
+  // title
+  whoosh(42.4, 0.8, 0.5); hit(43.2, 1.5, 36); braam(43.2, 1.1, 4); chime(43.3, 0.3);
+  drone(43.4, 53.4, 0.13, 43.65);
+  [[45.7, 69], [46.2, 72], [46.7, 76], [47.2, 81]].forEach(([t, m]) => piano(t, m, 0.16, 3));
+  // case file
+  whoosh(48.2, 0.5, 0.35, false); for (const s of [48.9, 49.3, 49.7]) { hit(s, 0.35, 110); stat(s, 0.05, 0.3); }
+  typeRun(50.6, 30, 45); hit(51.8, 1.1, 50); stat(51.8, 0.1, 0.4);
+  // end card: music box plays the house's tune
+  piano(53.2, 45, 0.25, 5); piano(53.2, 57, 0.18, 5); typeRun(54.3, URL_TEXT.length, 16);
+  mel.forEach((m, i) => mbox(54.6 + i * 0.44, m + 24, 0.5)); drone(53.4, 62.0, 0.07, 45);
+  whisper(58.0, 1.5, 0.25, 0.4); giggle(60.6, 0.14);
+  // STOP
+  hit(62.0, 0.5, 90); stat(62.1, 1.2, 0.25); { const g = ac.createGain(); g.connect(bus(0.4, 0.1)); env(g, 62.0, 0.02, 0.15, 0.4, 0.8); const o = osc('sawtooth', 70, 62.0, 1.3, filt('lowpass', 300, 2, g)); o.frequency.exponentialRampToValueAtTime(20, 63.2); }
+
+  const buf = await ac.startRendering();
+  // WAV encode
+  const L = buf.getChannelData(0), R = buf.getChannelData(1), n = L.length, out = new DataView(new ArrayBuffer(44 + n * 4));
+  const w = (o, s) => { for (let i = 0; i < s.length; i++) out.setUint8(o + i, s.charCodeAt(i)); };
+  w(0, 'RIFF'); out.setUint32(4, 36 + n * 4, true); w(8, 'WAVE'); w(12, 'fmt '); out.setUint32(16, 16, true); out.setUint16(20, 1, true); out.setUint16(22, 2, true);
+  out.setUint32(24, SR, true); out.setUint32(28, SR * 4, true); out.setUint16(32, 4, true); out.setUint16(34, 16, true); w(36, 'data'); out.setUint32(40, n * 4, true);
+  let peak = 0; for (let i = 0; i < n; i++) peak = Math.max(peak, Math.abs(L[i]), Math.abs(R[i]));
+  const gain = peak > 0.98 ? 0.98 / peak : 1;
+  for (let i = 0; i < n; i++) { out.setInt16(44 + i * 4, clamp(L[i] * gain, -1, 1) * 32767, true); out.setInt16(46 + i * 4, clamp(R[i] * gain, -1, 1) * 32767, true); }
+  const bytes = new Uint8Array(out.buffer); let bin = ''; for (let i = 0; i < bytes.length; i += 0x8000) bin += String.fromCharCode.apply(null, bytes.subarray(i, i + 0x8000));
+  return { wav: btoa(bin), peak };
+}
+window.renderFrame = renderFrame; window.renderAudio = renderAudio; window.FRAMES = FRAMES;
+</script>
+</body>
+</html>
